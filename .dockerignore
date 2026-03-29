@@ -1,0 +1,15 @@
+node_modules
+apps/api/node_modules
+apps/admin/node_modules
+apps/api/dist
+apps/admin/.next
+apps/admin/out
+**/*.log
+.git
+.gitignore
+*.md
+*.docx
+*.txt
+.env
+.env.*
+!.env.example

@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.env
+.env.production
+*.local
+
+# Prisma
+apps/api/prisma/migrations/*.lock
+
+# Next.js
+apps/admin/.next/
+apps/admin/out/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store

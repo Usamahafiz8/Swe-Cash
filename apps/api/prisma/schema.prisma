@@ -1,0 +1,275 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
+
+enum AccountStatus {
+  active
+  suspended
+  banned
+}
+
+enum FraudStatus {
+  normal
+  suspicious
+  blocked
+}
+
+enum TransactionType {
+  adjoe_reward
+  ad_reward
+  referral_reward
+  bonus
+  payout_request
+  payout_completed
+  payout_rejected
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  rejected
+}
+
+enum PayoutStatus {
+  pending
+  approved
+  completed
+  rejected
+  frozen
+}
+
+enum NotificationTarget {
+  all
+  country
+  activity_level
+  earnings_tier
+}
+
+enum NotificationStatus {
+  draft
+  scheduled
+  sent
+  failed
+}
+
+enum AdminRole {
+  super_admin
+  operations
+  finance
+}
+
+// ─── USERS ────────────────────────────────────────────────────────────────────
+
+model User {
+  id                String        @id @default(uuid())
+  googleId          String        @unique @map("google_id")
+  name              String
+  email             String        @unique
+  profileImageUrl   String?       @map("profile_image_url")
+  country           String?
+  deviceId          String?       @map("device_id")
+  gaid              String?
+  fcmToken          String?       @map("fcm_token")
+  accountStatus     AccountStatus @default(active) @map("account_status")
+  fraudStatus       FraudStatus   @default(normal) @map("fraud_status")
+  referralCode      String        @unique @map("referral_code")
+  referredByUserId  String?       @map("referred_by_user_id")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  lastLoginAt       DateTime?     @map("last_login_at")
+
+  // Relations
+  referredBy        User?         @relation("UserReferral", fields: [referredByUserId], references: [id])
+  referrals         User[]        @relation("UserReferral")
+  wallet            Wallet?
+  transactions      Transaction[]
+  payouts           Payout[]
+  devices           Device[]
+  fraudLogs         FraudLog[]
+  referralsMade     Referral[]    @relation("ReferrerUser")
+  referralReceived  Referral[]    @relation("ReferredUser")
+
+  @@map("users")
+}
+
+// ─── WALLETS ──────────────────────────────────────────────────────────────────
+
+model Wallet {
+  id               String   @id @default(uuid())
+  userId           String   @unique @map("user_id")
+  availableBalance Decimal  @default(0) @map("available_balance") @db.Decimal(12, 4)
+  pendingBalance   Decimal  @default(0) @map("pending_balance") @db.Decimal(12, 4)
+  lifetimeEarnings Decimal  @default(0) @map("lifetime_earnings") @db.Decimal(12, 4)
+  lifetimePayouts  Decimal  @default(0) @map("lifetime_payouts") @db.Decimal(12, 4)
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@map("wallets")
+}
+
+// ─── TRANSACTIONS (LEDGER) ────────────────────────────────────────────────────
+
+model Transaction {
+  id          String            @id @default(uuid())
+  userId      String            @map("user_id")
+  amount      Decimal           @db.Decimal(12, 4)
+  type        TransactionType
+  status      TransactionStatus @default(pending)
+  referenceId String?           @map("reference_id")
+  metadata    Json?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  user        User              @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([referenceId])
+  @@index([type])
+  @@map("transactions")
+}
+
+// ─── REFERRALS ────────────────────────────────────────────────────────────────
+
+model Referral {
+  id                    String   @id @default(uuid())
+  referrerUserId        String   @map("referrer_user_id")
+  referredUserId        String   @map("referred_user_id")
+  level                 Int
+  isActive              Boolean  @default(false) @map("is_active")
+  totalCommissionEarned Decimal  @default(0) @map("total_commission_earned") @db.Decimal(12, 4)
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  referrer              User     @relation("ReferrerUser", fields: [referrerUserId], references: [id])
+  referred              User     @relation("ReferredUser", fields: [referredUserId], references: [id])
+
+  @@unique([referrerUserId, referredUserId, level])
+  @@index([referredUserId])
+  @@map("referrals")
+}
+
+// ─── PAYOUTS ──────────────────────────────────────────────────────────────────
+
+model Payout {
+  id              String       @id @default(uuid())
+  userId          String       @map("user_id")
+  amount          Decimal      @db.Decimal(12, 4)
+  paypalEmail     String       @map("paypal_email")
+  status          PayoutStatus @default(pending)
+  paypalPayoutId  String?      @map("paypal_payout_id")
+  adminNote       String?      @map("admin_note")
+  processedAt     DateTime?    @map("processed_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  user            User         @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("payouts")
+}
+
+// ─── DEVICES ──────────────────────────────────────────────────────────────────
+
+model Device {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  deviceId  String   @map("device_id")
+  ipAddress String   @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([deviceId])
+  @@index([ipAddress])
+  @@map("devices")
+}
+
+// ─── FRAUD LOGS ───────────────────────────────────────────────────────────────
+
+model FraudLog {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  eventType       String   @map("event_type")
+  detectedValue   String   @map("detected_value")
+  relatedUserId   String?  @map("related_user_id")
+  actionTaken     String   @map("action_taken")
+  reviewedByAdmin Boolean  @default(false) @map("reviewed_by_admin")
+  adminVerdict    String?  @map("admin_verdict")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([eventType])
+  @@map("fraud_logs")
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+
+model Notification {
+  id               String             @id @default(uuid())
+  title            String
+  body             String
+  targetType       NotificationTarget @map("target_type")
+  targetValue      String?            @map("target_value")
+  status           NotificationStatus @default(draft)
+  scheduledAt      DateTime?          @map("scheduled_at")
+  sentAt           DateTime?          @map("sent_at")
+  createdByAdminId String             @map("created_by_admin_id")
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  metadata         Json?
+  createdBy        Admin              @relation(fields: [createdByAdminId], references: [id])
+
+  @@map("notifications")
+}
+
+// ─── COUNTRIES ────────────────────────────────────────────────────────────────
+
+model Country {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  name           String
+  isEnabled      Boolean  @default(true) @map("is_enabled")
+  payoutEnabled  Boolean  @default(false) @map("payout_enabled")
+  isRestricted   Boolean  @default(false) @map("is_restricted")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("countries")
+}
+
+// ─── SETTINGS ─────────────────────────────────────────────────────────────────
+
+model Setting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedBy   String?  @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// ─── ADMINS ───────────────────────────────────────────────────────────────────
+
+model Admin {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  name          String
+  role          AdminRole @default(operations)
+  isActive      Boolean   @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  notifications Notification[]
+
+  @@map("admins")
+}
