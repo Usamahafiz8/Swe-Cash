@@ -17,7 +17,8 @@ export class FirebaseService implements OnModuleInit {
       .get<string>('FIREBASE_PRIVATE_KEY', '')
       .replace(/\\n/g, '\n');
 
-    if (!projectId || !clientEmail || !privateKey) {
+    if (!projectId || !clientEmail || !privateKey ||
+        projectId === 'pending' || clientEmail === 'pending' || privateKey === 'pending') {
       this.logger.warn('Firebase credentials not set — notifications disabled.');
       return;
     }

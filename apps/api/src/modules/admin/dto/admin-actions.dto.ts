@@ -6,6 +6,7 @@ import {
   Min,
   IsEmail,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AccountStatus, PayoutStatus } from '@prisma/client';
@@ -107,5 +108,3 @@ export class CreateAdminDto {
   name: string;
 }
 
-// re-export for convenience
-import { MinLength } from 'class-validator';

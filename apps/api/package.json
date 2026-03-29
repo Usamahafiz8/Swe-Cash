@@ -7,10 +7,10 @@
     "build": "nest build",
     "start": "node dist/main",
     "prisma": "prisma",
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' ts-node prisma/seed.ts"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/bull": "^10.1.1",
