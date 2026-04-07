@@ -37,11 +37,9 @@ services:
     ports:
       - '5555:5555'
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${DO_DATABASE_URL}
     volumes:
       - ./apps/api/prisma:/app/prisma
-    depends_on:
-      - postgres
     restart: unless-stopped
 
   admin:
