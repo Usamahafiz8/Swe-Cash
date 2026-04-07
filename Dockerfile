@@ -23,11 +23,13 @@ FROM node:20-alpine AS runner
 RUN apk add --no-cache openssl && npm install -g prisma@5.22.0
 WORKDIR /app
 
-# Only copy what the running process needs
-COPY --from=builder /app/node_modules                    ./node_modules
-COPY --from=builder /app/apps/api/dist                   ./dist
-COPY --from=builder /app/apps/api/prisma                 ./prisma
 COPY --from=builder /app/apps/api/package.json           ./package.json
+COPY --from=builder /app/apps/api/prisma                 ./prisma
+
+RUN npm install --omit=dev --ignore-scripts
+RUN prisma generate --schema ./prisma/schema.prisma
+
+COPY --from=builder /app/apps/api/dist                   ./dist
 
 # Entrypoint runs migrations then starts the server
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
