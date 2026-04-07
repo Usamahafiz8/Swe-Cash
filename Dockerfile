@@ -20,6 +20,7 @@ RUN pnpm --filter api exec nest build
 
 # ─── Stage 3: Production runner ──────────────────────────────────────────────
 FROM node:20-alpine AS runner
+RUN npm install -g prisma@5.22.0
 WORKDIR /app
 
 # Only copy what the running process needs
