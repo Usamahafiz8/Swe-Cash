@@ -33,7 +33,7 @@ services:
   prisma-studio:
     image: node:20-alpine
     working_dir: /app
-    command: sh -c "npm install -g prisma@5.22.0 && prisma studio --schema ./prisma/schema.prisma --port 5555 --hostname 0.0.0.0 --browser none"
+    command: sh -c "apk add --no-cache openssl && npm install -g prisma@5.22.0 && prisma studio --schema ./prisma/schema.prisma --port 5555 --hostname 0.0.0.0 --browser none"
     ports:
       - '5555:5555'
     environment:
