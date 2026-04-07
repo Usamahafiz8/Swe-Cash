@@ -30,6 +30,16 @@ services:
       - redis
     restart: unless-stopped
 
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    ports:
+      - '3001:3001'
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     command: redis-server --requirepass ${REDIS_PASSWORD}

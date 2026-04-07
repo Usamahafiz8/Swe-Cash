@@ -1,0 +1,32 @@
+FROM node:20-alpine AS deps
+RUN npm install -g pnpm
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/admin/package.json ./apps/admin/package.json
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+FROM deps AS builder
+WORKDIR /app
+
+COPY apps/admin ./apps/admin
+
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+RUN pnpm --filter admin run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/apps/admin/public         ./public
+COPY --from=builder /app/apps/admin/.next          ./.next
+COPY --from=builder /app/apps/admin/package.json   ./package.json
+COPY --from=builder /app/node_modules              ./node_modules
+
+EXPOSE 3001
+
+CMD ["node_modules/.bin/next", "start", "-p", "3001"]
