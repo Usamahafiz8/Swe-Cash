@@ -84,12 +84,13 @@ export class NotificationsService {
     await this.markSent(data.notificationId, result.successCount, result.failureCount);
   }
 
-  async getHistory(page = 1, limit = 20) {
-    const skip = ((page ?? 1) - 1) * (limit ?? 20);
+  async getHistory(page?: number, limit?: number) {
+    const p = Number(page) || 1;
+    const l = Number(limit) || 20;
     const items = await this.prisma.notification.findMany({
       orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit ?? 20,
+      skip: (p - 1) * l,
+      take: l,
     });
     return items.map((n) => ({
       id: n.id,
