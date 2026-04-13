@@ -230,7 +230,18 @@ export class PayoutsService {
       this.prisma.payout.findMany({ where, include: { user: { select: { name: true, email: true, country: true } } }, orderBy: { createdAt: 'desc' }, skip, take: limit }),
       this.prisma.payout.count({ where }),
     ]);
-    return { items, total, page, limit, pages: Math.ceil(total / limit) };
+    const statusMap: Record<string, string> = { approved: 'processing', rejected: 'failed' };
+    const data = items.map((p) => ({
+      id: p.id,
+      userId: p.userId,
+      userEmail: p.user?.email ?? '',
+      amount: p.amount.toNumber(),
+      paypalEmail: p.paypalEmail,
+      status: statusMap[p.status] ?? p.status,
+      adminNote: p.adminNote ?? undefined,
+      createdAt: p.createdAt,
+    }));
+    return { data, total, page, limit };
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────

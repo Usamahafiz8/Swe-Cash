@@ -95,9 +95,15 @@ export class AdminController {
   }
 
   @UseGuards(AdminJwtGuard)
+  @Get('fraud-logs')
+  listFraudLogs(@Query('status') status?: string) {
+    return this.fraudService.listFraudLogs(status);
+  }
+
+  @UseGuards(AdminJwtGuard)
   @Patch('fraud-logs/:id/review')
-  reviewFraudLog(@Param('id') id: string, @Body('verdict') verdict: string) {
-    return this.fraudService.reviewLog(id, verdict);
+  reviewFraudLog(@Param('id') id: string, @Body('status') status: string) {
+    return this.fraudService.reviewLog(id, status);
   }
 
   // ─── Payouts ────────────────────────────────────────────────────────────────

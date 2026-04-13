@@ -27,14 +27,14 @@ export class NotificationsService {
   ) {}
 
   async send(dto: SendNotificationDto, adminId: string) {
-    const scheduledAt = dto.scheduledAt ? new Date(dto.scheduledAt) : null;
+    const scheduledAt = dto.scheduledFor ? new Date(dto.scheduledFor) : null;
     const isScheduled = scheduledAt && scheduledAt > new Date();
 
     const record = await this.prisma.notification.create({
       data: {
         title: dto.title,
         body: dto.body,
-        targetType: dto.targetType,
+        targetType: dto.target,
         targetValue: dto.targetValue ?? null,
         status: isScheduled ? 'scheduled' : 'draft',
         scheduledAt,
@@ -46,7 +46,7 @@ export class NotificationsService {
       notificationId: record.id,
       title: dto.title,
       body: dto.body,
-      targetType: dto.targetType,
+      targetType: dto.target,
       targetValue: dto.targetValue,
     };
 
@@ -85,17 +85,23 @@ export class NotificationsService {
   }
 
   async getHistory(page = 1, limit = 20) {
-    const skip = (page - 1) * limit;
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.notification.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-        include: { createdBy: { select: { name: true, email: true } } },
-      }),
-      this.prisma.notification.count(),
-    ]);
-    return { items, total, page, limit, pages: Math.ceil(total / limit) };
+    const skip = ((page ?? 1) - 1) * (limit ?? 20);
+    const items = await this.prisma.notification.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit ?? 20,
+    });
+    return items.map((n) => ({
+      id: n.id,
+      title: n.title,
+      body: n.body,
+      target: n.targetType,
+      targetValue: n.targetValue ?? undefined,
+      scheduledFor: n.scheduledAt ?? undefined,
+      sentAt: n.sentAt ?? undefined,
+      status: n.status ?? undefined,
+      createdAt: n.createdAt,
+    }));
   }
 
   // ─── Private ─────────────────────────────────────────────────────────────

@@ -120,18 +120,59 @@ export class FraudService {
     this.logger.warn(`Fraud: user=${userId} escalated to BLOCKED`);
   }
 
-  async reviewLog(logId: string, verdict: string) {
+  async reviewLog(logId: string, status: string) {
     return this.prisma.fraudLog.update({
       where: { id: logId },
-      data: { reviewedByAdmin: true, adminVerdict: verdict },
+      data: { reviewedByAdmin: true, adminVerdict: status },
     });
   }
 
   async getLogsForUser(userId: string) {
-    return this.prisma.fraudLog.findMany({
+    const logs = await this.prisma.fraudLog.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
+    return logs.map(this.mapLog);
+  }
+
+  async listFraudLogs(status?: string) {
+    const where = status
+      ? status === 'pending'
+        ? { reviewedByAdmin: false }
+        : { reviewedByAdmin: true, adminVerdict: { contains: status } }
+      : {};
+    const logs = await this.prisma.fraudLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return logs.map(this.mapLog);
+  }
+
+  private mapLog(log: {
+    id: string; userId: string; eventType: string; detectedValue: string;
+    actionTaken: string; reviewedByAdmin: boolean; adminVerdict: string | null; createdAt: Date;
+  }) {
+    const severityMap: Record<string, string> = {
+      ip_collision: 'high', gaid_change: 'medium', rapid_rewards: 'high',
+      payout_hammering: 'medium', admin_status_change: 'low',
+    };
+    let logStatus = 'pending';
+    if (log.reviewedByAdmin) {
+      const v = log.adminVerdict ?? '';
+      if (v.includes('escalated')) logStatus = 'escalated';
+      else if (v.includes('dismissed')) logStatus = 'dismissed';
+      else logStatus = 'reviewed';
+    }
+    return {
+      id: log.id,
+      userId: log.userId,
+      type: log.eventType,
+      description: log.detectedValue,
+      severity: severityMap[log.eventType] ?? 'medium',
+      status: logStatus,
+      createdAt: log.createdAt,
+    };
   }
 
   // ─── Private ─────────────────────────────────────────────────────────────
