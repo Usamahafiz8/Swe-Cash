@@ -1,24 +1,23 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export function Header() {
   const router = useRouter();
+  const [admin, setAdmin] = useState<{ name: string; email: string; role: string } | null>(null);
 
-  const getAdmin = () => {
-    if (typeof window === 'undefined') return null;
+  useEffect(() => {
     const str = localStorage.getItem('admin_user');
-    if (!str) return null;
+    if (!str) return;
     try {
-      return JSON.parse(str) as { name: string; email: string; role: string };
+      setAdmin(JSON.parse(str));
     } catch {
-      return null;
+      // ignore
     }
-  };
-
-  const admin = getAdmin();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token');

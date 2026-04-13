@@ -39,7 +39,18 @@ export class AdminUsersService {
       this.prisma.user.count({ where }),
     ]);
 
-    return { items, total, page, limit, pages: Math.ceil(total / limit) };
+    const data = items.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      country: u.country,
+      status: u.accountStatus as string,
+      walletBalance: u.wallet?.availableBalance ?? 0,
+      lifetimeEarnings: u.wallet?.lifetimeEarnings ?? 0,
+      createdAt: u.createdAt,
+    }));
+
+    return { data, total, page, limit };
   }
 
   async getUserDetail(userId: string) {
