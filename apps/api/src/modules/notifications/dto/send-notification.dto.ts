@@ -9,7 +9,7 @@ export class SendNotificationDto {
   body: string;
 
   @IsEnum(NotificationTarget)
-  targetType: NotificationTarget;
+  target: NotificationTarget;
 
   @IsOptional()
   @IsString()
@@ -17,5 +17,5 @@ export class SendNotificationDto {
 
   @IsOptional()
   @IsDateString()
-  scheduledAt?: string; // ISO string — if provided, schedules for future delivery
+  scheduledFor?: string;
 }
