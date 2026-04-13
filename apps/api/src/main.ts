@@ -17,8 +17,13 @@ async function bootstrap() {
     }),
   );
 
+  const allowedOrigins = (process.env.ADMIN_URL ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: process.env.ADMIN_URL,
+    origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
     credentials: true,
   });
 
