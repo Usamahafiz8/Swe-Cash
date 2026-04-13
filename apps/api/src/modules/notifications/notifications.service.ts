@@ -59,7 +59,7 @@ export class NotificationsService {
     });
 
     this.logger.log(
-      `Notification queued: id=${record.id} target=${dto.targetType} scheduled=${isScheduled}`,
+      `Notification queued: id=${record.id} target=${dto.target} scheduled=${isScheduled}`,
     );
 
     return {
