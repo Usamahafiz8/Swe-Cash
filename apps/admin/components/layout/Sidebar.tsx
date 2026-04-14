@@ -9,6 +9,7 @@ import {
   Settings,
   Bell,
   Shield,
+  DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +18,7 @@ const navItems = [
   { href: '/payouts', label: 'Payouts', icon: CreditCard },
   { href: '/fraud', label: 'Fraud', icon: AlertTriangle },
   { href: '/notifications', label: 'Notifications', icon: Bell },
+  { href: '/currencies', label: 'Currencies', icon: DollarSign },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 

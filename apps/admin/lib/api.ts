@@ -189,3 +189,25 @@ export const notificationsApi = {
     scheduledFor?: string;
   }) => apiClient.post<Notification>('/admin/notifications', payload),
 };
+
+// ─── Currencies ────────────────────────────────────────────────────────────
+
+export interface Currency {
+  id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  rateToUsd: number;
+  isEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const currenciesApi = {
+  list: () => apiClient.get<Currency[]>('/admin/currencies'),
+  create: (payload: { code: string; name: string; symbol: string; rateToUsd: number }) =>
+    apiClient.post<Currency>('/admin/currencies', payload),
+  update: (code: string, payload: Partial<{ name: string; symbol: string; rateToUsd: number; isEnabled: boolean }>) =>
+    apiClient.patch<Currency>(`/admin/currencies/${code}`, payload),
+  remove: (code: string) => apiClient.delete(`/admin/currencies/${code}`),
+};

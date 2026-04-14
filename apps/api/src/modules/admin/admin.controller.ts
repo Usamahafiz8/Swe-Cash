@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -25,6 +26,8 @@ import { FraudService } from '../fraud/fraud.service';
 import { SettingsService } from '../settings/settings.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SendNotificationDto } from '../notifications/dto/send-notification.dto';
+import { CurrencyService } from '../currency/currency.service';
+import { CreateCurrencyDto, UpdateCurrencyDto } from '../currency/dto/currency.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import {
   AdminListQueryDto,
@@ -48,6 +51,7 @@ export class AdminController {
     private readonly fraudService: FraudService,
     private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
+    private readonly currencyService: CurrencyService,
   ) {}
 
   @Post('auth/login')
@@ -222,5 +226,41 @@ export class AdminController {
   @ApiOperation({ summary: 'Get notification send history' })
   getNotificationHistory(@Query('page') page?: number, @Query('limit') limit?: number) {
     return this.notificationsService.getHistory(page, limit);
+  }
+
+  // ─── Currencies ──────────────────────────────────────────────────────────────
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Get('currencies')
+  @ApiOperation({ summary: 'List all currencies (enabled and disabled)' })
+  listCurrencies() {
+    return this.currencyService.listAll();
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Post('currencies')
+  @ApiOperation({ summary: 'Add a new currency' })
+  createCurrency(@Body() dto: CreateCurrencyDto) {
+    return this.currencyService.create(dto);
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Patch('currencies/:code')
+  @ApiOperation({ summary: 'Update currency rate, symbol, name or enabled status' })
+  @ApiParam({ name: 'code', description: 'ISO 4217 currency code', example: 'EUR' })
+  updateCurrency(@Param('code') code: string, @Body() dto: UpdateCurrencyDto) {
+    return this.currencyService.update(code, dto);
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Delete('currencies/:code')
+  @ApiOperation({ summary: 'Delete a currency (USD cannot be deleted)' })
+  @ApiParam({ name: 'code', description: 'ISO 4217 currency code', example: 'SEK' })
+  deleteCurrency(@Param('code') code: string) {
+    return this.currencyService.remove(code);
   }
 }

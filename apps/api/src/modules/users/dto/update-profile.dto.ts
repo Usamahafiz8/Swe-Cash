@@ -12,4 +12,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   fcmToken?: string;
+
+  @ApiPropertyOptional({ description: 'Preferred display currency (ISO 4217)', example: 'EUR' })
+  @IsOptional()
+  @IsString()
+  @Length(3, 3)
+  preferredCurrency?: string;
 }
