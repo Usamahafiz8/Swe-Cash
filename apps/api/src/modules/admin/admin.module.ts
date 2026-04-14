@@ -11,6 +11,7 @@ import { PayoutsModule } from '../payouts/payouts.module';
 import { FraudModule } from '../fraud/fraud.module';
 import { SettingsModule } from '../settings/settings.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CurrencyModule } from '../currency/currency.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     FraudModule,
     SettingsModule,
     NotificationsModule,
+    CurrencyModule,
   ],
   controllers: [AdminController],
   providers: [AdminAuthService, AdminUsersService, AdminJwtStrategy],

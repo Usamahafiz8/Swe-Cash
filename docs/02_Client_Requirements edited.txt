@@ -1,0 +1,151 @@
+A.1 – App Configuration
+
+New App Details:
+
+* SDK Hash: e225926acd199e71fa907459518b1f02
+* S2S Token: 9HD72W4b3tc5KlYkBf6oV8Gzh0ARiMU1
+
+S2S endpoint will be shared later.
+
+---
+
+A.2 – PayPal Integration
+
+Sandbox Credentials:
+
+* Client ID: ARts1Ku6DEJgO9KeH-Qq11uQA-Ni4He9BZdHuyNi_Cz8mgdrAMT-FIcCNPIGbZs7aA7-UIs5feY57Y5H
+* Secret Key: EAlFpOZUFpDlHQhFg0pKOM5VDKaQQwXYhKd_B9llncHSnN2JkRGiDtOuafCX0aekUFwQ7LyEELYtWV3k
+
+Live Credentials:
+
+* Client ID: EAlFpOZUFpDlHQhFg0pKOM5VDKaQQwXYhKd_B9llncHSnN2JkRGiDtOuafCX0aekUFwQ7LyEELYtWV3k
+* Secret Key: EJ4rYreL856Nbbob6dgxyuF0rbdNLEFOadI9vsKaDV_fDVsWYtCV7T3PB0YhQlk_krvB0zgfTL_AkFTR
+
+---
+
+A.3 – Backend Access
+
+All required backend-related details have been shared with Ali.
+
+---
+
+A.4 – Status
+
+Completed.
+
+---
+
+B.1 – Reward System Rules
+
+1. Adjoe Rewards:
+   Earnings are based on Adjoe S2S postbacks.
+   Rewards vary depending on the task (time-based or level-based), and users are credited based on the received postback data.
+
+2. Rewarded Ads:
+   Users receive a +10% bonus on their last Adjoe reward.
+   The “Watch Ad” button appears only after earning from Adjoe and is optional.
+
+3. Minimum Payout:
+   Minimum withdrawal amount is $1.
+
+Additionally, each user receives a starting bonus of $0.03 upon signup.
+This amount is withdrawable immediately (one-time only).
+
+After the first withdrawal, the minimum payout of $1 applies to all future withdrawals.
+
+4. Daily Earning Cap:
+   No daily earning cap.
+
+5. Rewarded Ads Limit:
+   No strict limit for now.
+
+6. Pending Balance:
+   All earnings require admin approval before becoming withdrawable.
+
+---
+
+B.2 – Payout Processing
+
+Admin approval is required by default.
+
+However, the system must be flexible:
+
+* Option to enable/disable automatic payouts
+* If enabled: payouts under $5 can be processed automatically
+* If disabled: all payouts must be manually approved
+
+---
+
+B.3 – Ad Network Setup
+
+AdMob will be used as the main ad network with mediation enabled.
+
+Mediation includes:
+
+* Unity Ads
+* Meta Audience Network
+* AppLovin
+
+All required SDKs must be integrated in the Unity app.
+
+Note:
+AdMob does not support server-to-server reward callbacks, so rewarded ad logic will be handled client-side with proper validation and limits.
+
+---
+
+B.4 – Referral System
+
+Multi-level referral system:
+
+* Level 1: 15%
+* Level 2: 12%
+* Level 3: 5%
+
+There is NO one-time bonus.
+
+Referral commissions are continuous and lifetime-based.
+
+Important condition:
+Referral earnings do NOT start immediately after signup.
+
+The referred user must:
+
+* Start earning rewards
+* Request their first payout
+* Get their payout approved
+
+Only after that, referral commissions become active.
+
+Example:
+
+User A invites User B.
+
+User B signs up and starts earning → User A earns nothing at this stage.
+
+Once User B completes and gets approval for the first withdrawal:
+→ Referral system activates.
+
+After that:
+
+* If User B earns $10 → User A gets 15% = $1.5
+* Earnings continue as long as User B remains active
+
+Commissions are calculated based on net platform earnings (after conversion), not raw Adjoe values.
+
+---
+
+B.5 – Country & Eligibility Rules
+
+Supported Countries:
+The app is available worldwide.
+
+Payout Eligibility:
+Only users from supported payout countries (Tier 1 such as US, UK, Canada, Germany, etc.) can request withdrawals.
+
+Users from other countries can still use the app and earn, but payouts may be restricted.
+
+Restricted Countries:
+Users from fully restricted countries cannot register.
+
+A message should be displayed:
+“This app is not available in your region.”

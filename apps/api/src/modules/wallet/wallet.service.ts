@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { TransactionType, TransactionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CurrencyService } from '../currency/currency.service';
 import { TransactionsQueryDto } from './dto/transactions-query.dto';
 
 export interface CreditParams {
@@ -28,14 +29,42 @@ export interface DebitParams {
 export class WalletService {
   private readonly logger = new Logger(WalletService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly currencyService: CurrencyService,
+  ) {}
 
   // ─── Public Read ────────────────────────────────────────────────────────────
 
   async getWallet(userId: string) {
-    const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
+    const [wallet, user] = await Promise.all([
+      this.prisma.wallet.findUnique({ where: { userId } }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { preferredCurrency: true } }),
+    ]);
     if (!wallet) throw new NotFoundException('Wallet not found.');
-    return wallet;
+
+    const currency = user?.preferredCurrency ?? 'USD';
+    const convert = (usd: number) => this.currencyService.convert(usd, currency);
+
+    const available = wallet.availableBalance.toNumber();
+    const pending   = wallet.pendingBalance.toNumber();
+    const lifetime  = wallet.lifetimeEarnings.toNumber();
+    const payouts   = wallet.lifetimePayouts.toNumber();
+
+    return {
+      // Raw USD values always included
+      availableBalanceUsd: available,
+      pendingBalanceUsd:   pending,
+      lifetimeEarningsUsd: lifetime,
+      lifetimePayoutsUsd:  payouts,
+      // Converted to user's preferred currency
+      currency,
+      symbol:              this.currencyService.getSymbol(currency),
+      availableBalance:    convert(available).amount,
+      pendingBalance:      convert(pending).amount,
+      lifetimeEarnings:    convert(lifetime).amount,
+      lifetimePayouts:     convert(payouts).amount,
+    };
   }
 
   async getTransactions(userId: string, query: TransactionsQueryDto) {

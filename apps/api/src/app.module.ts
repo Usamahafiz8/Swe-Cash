@@ -14,6 +14,7 @@ import { FraudModule } from './modules/fraud/fraud.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { CurrencyModule } from './modules/currency/currency.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { AdminModule } from './modules/admin/admin.module';
     FraudModule,
     NotificationsModule,
     SettingsModule,
+    CurrencyModule,
     AdminModule,
   ],
 })
