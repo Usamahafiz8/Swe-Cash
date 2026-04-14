@@ -79,10 +79,11 @@ model User {
   fcmToken          String?       @map("fcm_token")
   accountStatus     AccountStatus @default(active) @map("account_status")
   fraudStatus       FraudStatus   @default(normal) @map("fraud_status")
-  referralCode      String        @unique @map("referral_code")
-  referredByUserId  String?       @map("referred_by_user_id")
-  createdAt         DateTime      @default(now()) @map("created_at")
-  lastLoginAt       DateTime?     @map("last_login_at")
+  referralCode        String        @unique @map("referral_code")
+  referredByUserId    String?       @map("referred_by_user_id")
+  preferredCurrency   String        @default("USD") @map("preferred_currency")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  lastLoginAt         DateTime?     @map("last_login_at")
 
   // Relations
   referredBy        User?         @relation("UserReferral", fields: [referredByUserId], references: [id])
@@ -228,6 +229,21 @@ model Notification {
   createdBy        Admin              @relation(fields: [createdByAdminId], references: [id])
 
   @@map("notifications")
+}
+
+// ─── CURRENCIES ───────────────────────────────────────────────────────────────
+
+model Currency {
+  id          String   @id @default(uuid())
+  code        String   @unique          // ISO 4217: USD, EUR, SEK
+  name        String                    // e.g. "US Dollar"
+  symbol      String                    // e.g. "$", "€", "kr"
+  rateToUsd   Decimal  @map("rate_to_usd") @db.Decimal(18, 8) // 1 USD = X of this currency
+  isEnabled   Boolean  @default(true)   @map("is_enabled")
+  createdAt   DateTime @default(now())  @map("created_at")
+  updatedAt   DateTime @updatedAt       @map("updated_at")
+
+  @@map("currencies")
 }
 
 // ─── COUNTRIES ────────────────────────────────────────────────────────────────
