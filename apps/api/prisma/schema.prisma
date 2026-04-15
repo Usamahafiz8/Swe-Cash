@@ -246,6 +246,27 @@ model Currency {
   @@map("currencies")
 }
 
+// ─── RECURRING NOTIFICATIONS ─────────────────────────────────────────────────
+
+model RecurringNotification {
+  id               String             @id @default(uuid())
+  title            String
+  body             String
+  targetType       NotificationTarget @map("target_type")
+  targetValue      String?            @map("target_value")
+  frequency        String             // 'daily' | 'weekly' | 'monthly' | 'custom'
+  cronExpr         String             @map("cron_expr")
+  isActive         Boolean            @default(true) @map("is_active")
+  lastSentAt       DateTime?          @map("last_sent_at")
+  nextSendAt       DateTime?          @map("next_send_at")
+  createdByAdminId String             @map("created_by_admin_id")
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  createdBy        Admin              @relation(fields: [createdByAdminId], references: [id])
+
+  @@map("recurring_notifications")
+}
+
 // ─── COUNTRIES ────────────────────────────────────────────────────────────────
 
 model Country {
@@ -285,7 +306,8 @@ model Admin {
   lastLoginAt   DateTime? @map("last_login_at")
   createdAt     DateTime  @default(now()) @map("created_at")
 
-  notifications Notification[]
+  notifications          Notification[]
+  recurringNotifications RecurringNotification[]
 
   @@map("admins")
 }
