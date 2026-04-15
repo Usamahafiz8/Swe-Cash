@@ -82,6 +82,8 @@ model User {
   referralCode        String        @unique @map("referral_code")
   referredByUserId    String?       @map("referred_by_user_id")
   preferredCurrency   String        @default("USD") @map("preferred_currency")
+  loginStreak         Int           @default(0)     @map("login_streak")
+  lastStreakDate      DateTime?     @map("last_streak_date")
   createdAt           DateTime      @default(now()) @map("created_at")
   lastLoginAt         DateTime?     @map("last_login_at")
 
@@ -93,8 +95,9 @@ model User {
   payouts           Payout[]
   devices           Device[]
   fraudLogs         FraudLog[]
-  referralsMade     Referral[]    @relation("ReferrerUser")
-  referralReceived  Referral[]    @relation("ReferredUser")
+  referralsMade     Referral[]         @relation("ReferrerUser")
+  referralReceived  Referral[]         @relation("ReferredUser")
+  taskProgress      UserTaskProgress[]
 
   @@map("users")
 }
@@ -229,6 +232,56 @@ model Notification {
   createdBy        Admin              @relation(fields: [createdByAdminId], references: [id])
 
   @@map("notifications")
+}
+
+// ─── TASKS / MISSIONS ─────────────────────────────────────────────────────────
+
+enum TaskTriggerType {
+  ad_views           // watch X rewarded ads
+  adjoe_earnings     // earn $X from Adjoe games
+  login_streak       // log in X days in a row
+  referral_count     // refer X friends
+  earning_milestone  // reach $X lifetime earnings
+  profile_complete   // fill in country + fcm token
+  manual             // admin-granted only
+}
+
+model Task {
+  id              String          @id @default(uuid())
+  title           String
+  description     String
+  icon            String          @default("star")       // emoji or icon key
+  triggerType     TaskTriggerType @map("trigger_type")
+  triggerValue    Decimal         @map("trigger_value")   @db.Decimal(12, 4)
+  rewardAmount    Decimal         @map("reward_amount")   @db.Decimal(12, 4)
+  repeatInterval  String          @default("none")        @map("repeat_interval") // none | daily | weekly | monthly
+  isActive        Boolean         @default(true)          @map("is_active")
+  sortOrder       Int             @default(0)             @map("sort_order")
+  createdAt       DateTime        @default(now())         @map("created_at")
+  updatedAt       DateTime        @updatedAt              @map("updated_at")
+
+  userProgress    UserTaskProgress[]
+
+  @@map("tasks")
+}
+
+model UserTaskProgress {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  taskId      String    @map("task_id")
+  progress    Decimal   @default(0) @db.Decimal(12, 4)
+  completedAt DateTime? @map("completed_at")
+  claimedAt   DateTime? @map("claimed_at")
+  periodKey   String    @default("") @map("period_key")  // "" | "2026-04-15" | "2026-W16" | "2026-04"
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        User      @relation(fields: [userId], references: [id])
+  task        Task      @relation(fields: [taskId], references: [id])
+
+  @@unique([userId, taskId, periodKey])
+  @@index([userId])
+  @@index([taskId])
+  @@map("user_task_progress")
 }
 
 // ─── CURRENCIES ───────────────────────────────────────────────────────────────
