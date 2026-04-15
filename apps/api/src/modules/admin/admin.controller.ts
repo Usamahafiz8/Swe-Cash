@@ -28,6 +28,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { SendNotificationDto } from '../notifications/dto/send-notification.dto';
 import { CurrencyService } from '../currency/currency.service';
 import { CreateCurrencyDto, UpdateCurrencyDto } from '../currency/dto/currency.dto';
+import { TasksService } from '../tasks/tasks.service';
+import { CreateTaskDto, UpdateTaskDto } from '../tasks/dto/tasks.dto';
 import { RecurringNotificationsService } from '../notifications/recurring-notifications.service';
 import { CreateRecurringNotificationDto } from '../notifications/dto/recurring-notification.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
@@ -55,6 +57,7 @@ export class AdminController {
     private readonly notificationsService: NotificationsService,
     private readonly currencyService: CurrencyService,
     private readonly recurringService: RecurringNotificationsService,
+    private readonly tasksService: TasksService,
   ) {}
 
   @Post('auth/login')
@@ -304,5 +307,41 @@ export class AdminController {
   @ApiParam({ name: 'code', description: 'ISO 4217 currency code', example: 'SEK' })
   deleteCurrency(@Param('code') code: string) {
     return this.currencyService.remove(code);
+  }
+
+  // ─── Tasks ───────────────────────────────────────────────────────────────────
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Get('tasks')
+  @ApiOperation({ summary: 'List all tasks with completion and claim stats' })
+  listTasks() {
+    return this.tasksService.adminList();
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Post('tasks')
+  @ApiOperation({ summary: 'Create a new task/mission' })
+  createTask(@Body() dto: CreateTaskDto) {
+    return this.tasksService.adminCreate(dto);
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Patch('tasks/:id')
+  @ApiOperation({ summary: 'Update a task (title, reward, trigger value, active status, etc.)' })
+  @ApiParam({ name: 'id', description: 'Task UUID' })
+  updateTask(@Param('id') id: string, @Body() dto: UpdateTaskDto) {
+    return this.tasksService.adminUpdate(id, dto);
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Delete('tasks/:id')
+  @ApiOperation({ summary: 'Delete a task and all associated user progress' })
+  @ApiParam({ name: 'id', description: 'Task UUID' })
+  deleteTask(@Param('id') id: string) {
+    return this.tasksService.adminDelete(id);
   }
 }

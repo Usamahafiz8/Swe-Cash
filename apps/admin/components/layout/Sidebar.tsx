@@ -10,6 +10,7 @@ import {
   Bell,
   Shield,
   DollarSign,
+  Trophy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +19,7 @@ const navItems = [
   { href: '/payouts', label: 'Payouts', icon: CreditCard },
   { href: '/fraud', label: 'Fraud', icon: AlertTriangle },
   { href: '/notifications', label: 'Notifications', icon: Bell },
+  { href: '/tasks', label: 'Tasks', icon: Trophy },
   { href: '/currencies', label: 'Currencies', icon: DollarSign },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];

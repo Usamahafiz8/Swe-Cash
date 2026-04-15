@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -8,8 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { TasksService } from '../tasks/tasks.service';
 import { GoogleLoginDto } from './dto/google-login.dto';
-import { AccountStatus, FraudStatus } from '@prisma/client';
+import { AccountStatus, FraudStatus, TaskTriggerType } from '@prisma/client';
 
 const SIGNUP_BONUS = 0.03;
 const IP_COLLISION_THRESHOLD = 3;
@@ -23,12 +25,14 @@ interface GoogleProfile {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private googleClient: OAuth2Client;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly tasksService: TasksService,
   ) {
     this.googleClient = new OAuth2Client(
       config.get<string>('GOOGLE_CLIENT_ID'),
@@ -169,6 +173,12 @@ export class AuthService {
     // Run fraud checks after transaction (non-blocking to registration)
     await this.runRegistrationFraudChecks(user.id, dto, ipAddress);
 
+    // Task evaluation: profile_complete if country provided (non-blocking)
+    if (dto.country) {
+      this.tasksService.evaluate(user.id, TaskTriggerType.profile_complete, 1)
+        .catch((err) => this.logger.error('Task evaluate (profile_complete) failed', err));
+    }
+
     // Re-fetch with wallet
     return this.prisma.user.findUniqueOrThrow({
       where: { id: user.id },
@@ -204,6 +214,11 @@ export class AuthService {
     if (dto.emulator === true) {
       await this.flagUser(userId, 'emulator_detected', 'true', 'flagged_suspicious');
     }
+
+    // Task evaluation: login_streak (non-blocking)
+    this.tasksService.updateLoginStreak(userId)
+      .then((streak) => this.tasksService.evaluate(userId, TaskTriggerType.login_streak, streak))
+      .catch((err) => this.logger.error('Task evaluate (login_streak) failed', err));
 
     return user;
   }
