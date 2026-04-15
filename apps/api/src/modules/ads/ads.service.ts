@@ -4,10 +4,11 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { FraudStatus, AccountStatus } from '@prisma/client';
+import { FraudStatus, AccountStatus, TaskTriggerType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { ReferralService } from '../referral/referral.service';
+import { TasksService } from '../tasks/tasks.service';
 
 @Injectable()
 export class AdsService {
@@ -17,6 +18,7 @@ export class AdsService {
     private readonly prisma: PrismaService,
     private readonly walletService: WalletService,
     private readonly referralService: ReferralService,
+    private readonly tasksService: TasksService,
   ) {}
 
   async claimAdReward(userId: string) {
@@ -83,6 +85,11 @@ export class AdsService {
     this.referralService
       .processCommissions(userId, adReward, tx.id)
       .catch((err) => this.logger.error('Ad: referral commission failed', err));
+
+    // Task evaluation: count total ad_reward transactions (non-blocking)
+    this.prisma.transaction.count({ where: { userId, type: 'ad_reward', status: 'completed' } })
+      .then((count) => this.tasksService.evaluate(userId, TaskTriggerType.ad_views, count + 1))
+      .catch((err) => this.logger.error('Task evaluate (ad_views) failed', err));
 
     return {
       reward: adReward,

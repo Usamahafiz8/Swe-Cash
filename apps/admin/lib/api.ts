@@ -238,3 +238,45 @@ export const currenciesApi = {
     apiClient.patch<Currency>(`/admin/currencies/${code}`, payload),
   remove: (code: string) => apiClient.delete(`/admin/currencies/${code}`),
 };
+
+// ─── Tasks ─────────────────────────────────────────────────────────────────
+
+export type TaskTriggerType =
+  | 'ad_views'
+  | 'adjoe_earnings'
+  | 'login_streak'
+  | 'referral_count'
+  | 'earning_milestone'
+  | 'profile_complete'
+  | 'manual';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  triggerType: TaskTriggerType;
+  triggerValue: number;
+  rewardAmount: number;
+  repeatInterval: 'none' | 'daily' | 'weekly' | 'monthly';
+  isActive: boolean;
+  sortOrder: number;
+  completionCount: number;
+  claimedCount: number;
+  createdAt: string;
+}
+
+export const tasksApi = {
+  list: () => apiClient.get<Task[]>('/admin/tasks'),
+  create: (payload: {
+    title: string; description: string; icon?: string;
+    triggerType: TaskTriggerType; triggerValue: number; rewardAmount: number;
+    repeatInterval: string; sortOrder?: number;
+  }) => apiClient.post<Task>('/admin/tasks', payload),
+  update: (id: string, payload: Partial<{
+    title: string; description: string; icon: string;
+    triggerValue: number; rewardAmount: number; repeatInterval: string;
+    isActive: boolean; sortOrder: number;
+  }>) => apiClient.patch<Task>(`/admin/tasks/${id}`, payload),
+  remove: (id: string) => apiClient.delete(`/admin/tasks/${id}`),
+};

@@ -7,6 +7,8 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { SettingsService } from '../settings/settings.service';
+import { TasksService } from '../tasks/tasks.service';
+import { TaskTriggerType } from '@prisma/client';
 import { ApplyCodeDto } from './dto/apply-code.dto';
 
 @Injectable()
@@ -17,6 +19,7 @@ export class ReferralService {
     private readonly prisma: PrismaService,
     private readonly walletService: WalletService,
     private readonly settings: SettingsService,
+    private readonly tasksService: TasksService,
   ) {}
 
   // ─── Apply Referral Code ──────────────────────────────────────────────────
@@ -72,6 +75,12 @@ export class ReferralService {
     });
 
     this.logger.log(`Referral applied: user=${userId} referred_by=${referrer.id}`);
+
+    // Task evaluation: referral_count — count how many users referrer has referred (non-blocking)
+    this.prisma.referral.count({ where: { referrerUserId: referrer.id, level: 1 } })
+      .then((count) => this.tasksService.evaluate(referrer.id, TaskTriggerType.referral_count, count))
+      .catch((err) => this.logger.error('Task evaluate (referral_count) failed', err));
+
     return { message: 'Referral code applied successfully.' };
   }
 
