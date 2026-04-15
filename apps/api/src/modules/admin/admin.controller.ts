@@ -28,6 +28,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { SendNotificationDto } from '../notifications/dto/send-notification.dto';
 import { CurrencyService } from '../currency/currency.service';
 import { CreateCurrencyDto, UpdateCurrencyDto } from '../currency/dto/currency.dto';
+import { RecurringNotificationsService } from '../notifications/recurring-notifications.service';
+import { CreateRecurringNotificationDto } from '../notifications/dto/recurring-notification.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import {
   AdminListQueryDto,
@@ -52,6 +54,7 @@ export class AdminController {
     private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
     private readonly currencyService: CurrencyService,
+    private readonly recurringService: RecurringNotificationsService,
   ) {}
 
   @Post('auth/login')
@@ -253,6 +256,45 @@ export class AdminController {
   @ApiParam({ name: 'code', description: 'ISO 4217 currency code', example: 'EUR' })
   updateCurrency(@Param('code') code: string, @Body() dto: UpdateCurrencyDto) {
     return this.currencyService.update(code, dto);
+  }
+
+  // ─── Recurring Notifications ─────────────────────────────────────────────────
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Get('notifications/recurring')
+  @ApiOperation({ summary: 'List all recurring notifications' })
+  listRecurring() {
+    return this.recurringService.list();
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Post('notifications/recurring')
+  @ApiOperation({ summary: 'Create a recurring notification (daily / weekly / monthly / custom cron)' })
+  createRecurring(
+    @Body() dto: CreateRecurringNotificationDto,
+    @CurrentAdmin() admin: RequestAdmin,
+  ) {
+    return this.recurringService.create(dto, admin.id);
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Patch('notifications/recurring/:id/toggle')
+  @ApiOperation({ summary: 'Pause or resume a recurring notification' })
+  @ApiParam({ name: 'id', description: 'RecurringNotification UUID' })
+  toggleRecurring(@Param('id') id: string) {
+    return this.recurringService.toggle(id);
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Delete('notifications/recurring/:id')
+  @ApiOperation({ summary: 'Delete a recurring notification and cancel its schedule' })
+  @ApiParam({ name: 'id', description: 'RecurringNotification UUID' })
+  deleteRecurring(@Param('id') id: string) {
+    return this.recurringService.remove(id);
   }
 
   @UseGuards(AdminJwtGuard)
