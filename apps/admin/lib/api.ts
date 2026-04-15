@@ -179,6 +179,33 @@ export interface Notification {
   createdAt: string;
 }
 
+// ─── Recurring Notifications ──────────────────────────────────────────────
+
+export interface RecurringNotification {
+  id: string;
+  title: string;
+  body: string;
+  target: string;
+  targetValue?: string;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
+  cronExpr: string;
+  isActive: boolean;
+  lastSentAt?: string;
+  nextSendAt?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export const recurringApi = {
+  list: () => apiClient.get<RecurringNotification[]>('/admin/notifications/recurring'),
+  create: (payload: {
+    title: string; body: string; target: string; targetValue?: string;
+    frequency: string; hour?: number; dayOfWeek?: number; dayOfMonth?: number; cronExpr?: string;
+  }) => apiClient.post<RecurringNotification>('/admin/notifications/recurring', payload),
+  toggle: (id: string) => apiClient.patch(`/admin/notifications/recurring/${id}/toggle`),
+  remove: (id: string) => apiClient.delete(`/admin/notifications/recurring/${id}`),
+};
+
 export const notificationsApi = {
   list: () => apiClient.get<Notification[]>('/admin/notifications'),
   send: (payload: {
