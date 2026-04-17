@@ -50,6 +50,10 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     ports:
       - '3001:3001'
+    environment:
+      INTERNAL_API_URL: http://api:3000
+    depends_on:
+      - api
     restart: unless-stopped
 
   redis:
