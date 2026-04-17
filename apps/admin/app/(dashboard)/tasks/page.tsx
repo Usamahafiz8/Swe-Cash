@@ -42,7 +42,7 @@ function TaskModal({
   const [triggerType, setTrigger] = useState<TaskTriggerType>(existing?.triggerType ?? 'ad_views');
   const [triggerValue, setTrigVal] = useState(String(existing?.triggerValue ?? '1'));
   const [rewardAmount, setReward] = useState(String(existing?.rewardAmount ?? '0.05'));
-  const [repeatInterval, setRepeat] = useState(existing?.repeatInterval ?? 'none');
+  const [repeatInterval, setRepeat] = useState<'none' | 'daily' | 'weekly' | 'monthly'>(existing?.repeatInterval ?? 'none');
   const [sortOrder, setSortOrder] = useState(String(existing?.sortOrder ?? '0'));
   const [error, setError]         = useState('');
 
@@ -131,7 +131,7 @@ function TaskModal({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-700">Repeat</label>
-              <select className={inputCls} value={repeatInterval} onChange={(e) => setRepeat(e.target.value)}>
+              <select className={inputCls} value={repeatInterval} onChange={(e) => setRepeat(e.target.value as 'none' | 'daily' | 'weekly' | 'monthly')}>
                 {Object.entries(REPEAT_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
                 ))}
