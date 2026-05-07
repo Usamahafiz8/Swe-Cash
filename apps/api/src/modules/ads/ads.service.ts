@@ -21,6 +21,49 @@ export class AdsService {
     private readonly tasksService: TasksService,
   ) {}
 
+  async checkAdEligibility(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+    if (user.accountStatus !== AccountStatus.active) {
+      return { eligible: false, reason: 'Account is not active.' };
+    }
+    if (user.fraudStatus === FraudStatus.blocked) {
+      return { eligible: false, reason: 'Account is fraud-blocked.' };
+    }
+
+    const lastAdjoeReward = await this.prisma.transaction.findFirst({
+      where: { userId, type: 'adjoe_reward', status: 'completed' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!lastAdjoeReward) {
+      return { eligible: false, reason: 'No gameplay reward found yet. Play a game first.' };
+    }
+
+    const alreadyClaimed = await this.prisma.transaction.findFirst({
+      where: {
+        userId,
+        type: 'ad_reward',
+        metadata: { path: ['adjoe_tx_id'], equals: lastAdjoeReward.id },
+      },
+    });
+
+    if (alreadyClaimed) {
+      return {
+        eligible: false,
+        reason: 'Ad reward already claimed for your last game reward. Play more to unlock again.',
+      };
+    }
+
+    const potentialReward = parseFloat((lastAdjoeReward.amount.toNumber() * 0.1).toFixed(4));
+
+    return {
+      eligible: true,
+      potentialReward,
+      basedOnAdjoeAmount: lastAdjoeReward.amount.toNumber(),
+    };
+  }
+
   async claimAdReward(userId: string) {
     // ── 1. Load user ──────────────────────────────────────────────────────────
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });

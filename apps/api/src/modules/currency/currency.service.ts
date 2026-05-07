@@ -58,6 +58,16 @@ export class CurrencyService implements OnModuleInit {
     return this.cache.get(code)?.symbol ?? '$';
   }
 
+  // ─── Public ───────────────────────────────────────────────────────────────
+
+  async listEnabled() {
+    return this.prisma.currency.findMany({
+      where: { isEnabled: true },
+      select: { code: true, name: true, symbol: true, rateToUsd: true },
+      orderBy: { code: 'asc' },
+    });
+  }
+
   // ─── Admin CRUD ───────────────────────────────────────────────────────────
 
   async listAll() {

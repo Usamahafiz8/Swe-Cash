@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Delete, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -25,5 +25,13 @@ export class UsersController {
   @ApiOkResponse({ description: 'Updated profile' })
   updateProfile(@CurrentUser() user: RequestUser, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(user.id, dto);
+  }
+
+  @Delete('account')
+  @ApiOperation({ summary: 'Permanently delete account (App Store compliance). Anonymises PII; financial records kept for legal audit.' })
+  @ApiOkResponse({ description: 'Account deleted' })
+  @ApiResponse({ status: 400, description: 'Balance or pending payout exists — must resolve first' })
+  deleteAccount(@CurrentUser() user: RequestUser) {
+    return this.usersService.deleteAccount(user.id);
   }
 }

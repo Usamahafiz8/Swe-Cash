@@ -16,6 +16,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CurrencyModule } from './modules/currency/currency.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { CountriesModule } from './modules/countries/countries.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
     SettingsModule,
     CurrencyModule,
     TasksModule,
+    CountriesModule,
     AdminModule,
   ],
 })
