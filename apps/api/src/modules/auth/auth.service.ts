@@ -36,7 +36,25 @@ export class AuthService {
   ) {
     this.googleClient = new OAuth2Client(
       config.get<string>('GOOGLE_CLIENT_ID'),
+      config.get<string>('GOOGLE_CLIENT_SECRET'),
+      config.get<string>('GOOGLE_CALLBACK_URL'),
     );
+  }
+
+  getGoogleAuthUrl(): string {
+    return this.googleClient.generateAuthUrl({
+      access_type: 'offline',
+      scope: ['email', 'profile'],
+      prompt: 'select_account',
+    });
+  }
+
+  async googleCodeLogin(code: string, ipAddress: string) {
+    const { tokens } = await this.googleClient.getToken(code);
+    const idToken = tokens.id_token;
+    if (!idToken) throw new UnauthorizedException('No ID token from Google.');
+    const result = await this.googleLogin({ idToken } as GoogleLoginDto, ipAddress);
+    return { ...result, googleIdToken: idToken };
   }
 
   async googleLogin(dto: GoogleLoginDto, ipAddress: string) {
@@ -70,52 +88,6 @@ export class AuthService {
     // 4. Issue JWT
     const token = this.issueToken(user);
 
-    return {
-      token,
-      isNewUser,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        profileImageUrl: user.profileImageUrl,
-        country: user.country,
-        referralCode: user.referralCode,
-        accountStatus: user.accountStatus,
-        fraudStatus: user.fraudStatus,
-        wallet: user.wallet,
-      },
-    };
-  }
-
-  async googleOAuthLogin(
-    profile: { googleId: string; email: string; name: string; picture: string },
-    ipAddress: string,
-  ) {
-    let user = await this.prisma.user.findUnique({
-      where: { googleId: profile.googleId },
-      include: { wallet: true },
-    });
-
-    const isNewUser = !user;
-
-    if (isNewUser) {
-      user = await this.registerNewUser(
-        { sub: profile.googleId, email: profile.email, name: profile.name, picture: profile.picture },
-        { idToken: '' },
-        ipAddress,
-      );
-    } else {
-      user = await this.updateExistingUser(user!.id, { idToken: '' }, ipAddress);
-    }
-
-    if (user.accountStatus === AccountStatus.banned) {
-      throw new ForbiddenException('Your account has been permanently banned.');
-    }
-    if (user.accountStatus === AccountStatus.suspended) {
-      throw new ForbiddenException('Your account is suspended. Please contact support.');
-    }
-
-    const token = this.issueToken(user);
     return {
       token,
       isNewUser,
