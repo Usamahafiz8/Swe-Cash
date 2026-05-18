@@ -75,6 +75,84 @@ export class WalletService {
     };
   }
 
+  // ─── User-to-User Transfer ────────────────────────────────────────────────
+
+  async transfer(senderId: string, recipientCode: string, amount: number) {
+    if (amount <= 0) throw new BadRequestException('Transfer amount must be positive.');
+
+    const [sender, recipient] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: senderId },
+        include: { wallet: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { referralCode: recipientCode.toUpperCase() },
+        select: { id: true, name: true, referralCode: true },
+      }),
+    ]);
+
+    if (!sender) throw new NotFoundException('Sender not found.');
+    if (!recipient) throw new NotFoundException('Recipient referral code not found.');
+    if (sender.id === recipient.id) throw new BadRequestException('Cannot transfer to yourself.');
+
+    const available = sender.wallet?.availableBalance.toNumber() ?? 0;
+    if (amount > available) {
+      throw new BadRequestException(`Insufficient balance. Available: $${available.toFixed(4)}.`);
+    }
+
+    const referenceId = `transfer-${Date.now()}`;
+
+    await this.prisma.$transaction(async (tx) => {
+      // Lock both wallets to prevent race conditions
+      await tx.$queryRaw`
+        SELECT id FROM wallets WHERE user_id IN (${senderId}, ${recipient.id}) FOR UPDATE
+      `;
+
+      // Debit sender
+      await tx.transaction.create({
+        data: {
+          userId: senderId,
+          amount,
+          type: 'transfer_out',
+          status: 'completed',
+          referenceId,
+          metadata: { recipient_id: recipient.id, recipient_code: recipientCode.toUpperCase() },
+        },
+      });
+      await tx.wallet.update({
+        where: { userId: senderId },
+        data: { availableBalance: { decrement: amount } },
+      });
+
+      // Credit recipient instantly
+      await tx.transaction.create({
+        data: {
+          userId: recipient.id,
+          amount,
+          type: 'transfer_in',
+          status: 'completed',
+          referenceId,
+          metadata: { sender_id: senderId, sender_name: sender.name },
+        },
+      });
+      await tx.wallet.update({
+        where: { userId: recipient.id },
+        data: {
+          availableBalance: { increment: amount },
+          lifetimeEarnings: { increment: amount },
+        },
+      });
+    });
+
+    this.logger.log(`Transfer: $${amount} from user=${senderId} to user=${recipient.id}`);
+
+    return {
+      amount,
+      recipient: { name: recipient.name, referralCode: recipient.referralCode },
+      message: `$${amount} transferred to ${recipient.name}.`,
+    };
+  }
+
   async getTransactions(userId: string, query: TransactionsQueryDto) {
     const { type, page = 1, limit = 20 } = query;
     const skip = (page - 1) * limit;

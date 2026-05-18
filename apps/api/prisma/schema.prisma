@@ -29,6 +29,8 @@ enum TransactionType {
   payout_request
   payout_completed
   payout_rejected
+  transfer_out
+  transfer_in
 }
 
 enum TransactionStatus {
