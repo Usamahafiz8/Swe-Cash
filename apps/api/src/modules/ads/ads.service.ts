@@ -59,8 +59,11 @@ export class AdsService {
 
     return {
       eligible: true,
+      instant: true,
       potentialReward,
       basedOnAdjoeAmount: lastAdjoeReward.amount.toNumber(),
+      label: 'DAILY REWARD',
+      description: 'Watch Ad & Earn',
     };
   }
 
@@ -110,7 +113,7 @@ export class AdsService {
       (lastAdjoeReward.amount.toNumber() * 0.1).toFixed(4),
     );
 
-    // ── 5. Credit ─────────────────────────────────────────────────────────────
+    // ── 5. Credit then immediately release to available (INSTANT) ────────────
     const tx = await this.walletService.credit({
       userId,
       amount: adReward,
@@ -122,7 +125,9 @@ export class AdsService {
       },
     });
 
-    this.logger.log(`Ad reward: $${adReward} credited to user=${userId}`);
+    await this.walletService.releasePending(tx.id);
+
+    this.logger.log(`Ad reward: $${adReward} instantly credited to user=${userId}`);
 
     // Trigger referral commissions (non-blocking)
     this.referralService
@@ -136,8 +141,9 @@ export class AdsService {
 
     return {
       reward: adReward,
+      instant: true,
       transactionId: tx.id,
-      message: `+$${adReward} added to your pending balance.`,
+      message: `+$${adReward} instantly added to your balance.`,
     };
   }
 }
