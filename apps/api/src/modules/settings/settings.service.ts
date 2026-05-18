@@ -77,7 +77,7 @@ export class SettingsService implements OnModuleInit {
   }
 
   get referralCommissionL2() {
-    return this.getNumber(SETTING_KEYS.REFERRAL_COMMISSION_L2, 0.12);
+    return this.getNumber(SETTING_KEYS.REFERRAL_COMMISSION_L2, 0.10);
   }
 
   get referralCommissionL3() {
@@ -101,7 +101,7 @@ export class SettingsService implements OnModuleInit {
   private async seed() {
     const defaults: Array<{ key: string; value: string; description: string }> = [
       { key: SETTING_KEYS.REFERRAL_COMMISSION_L1, value: '0.15', description: '15% commission for Level 1 referrals' },
-      { key: SETTING_KEYS.REFERRAL_COMMISSION_L2, value: '0.12', description: '12% commission for Level 2 referrals' },
+      { key: SETTING_KEYS.REFERRAL_COMMISSION_L2, value: '0.10', description: '10% commission for Level 2 referrals' },
       { key: SETTING_KEYS.REFERRAL_COMMISSION_L3, value: '0.05', description: '5% commission for Level 3 referrals' },
       { key: SETTING_KEYS.MIN_PAYOUT_THRESHOLD, value: '1.00', description: 'Minimum USD balance to request payout' },
       { key: SETTING_KEYS.PAYOUT_AUTO_APPROVE_ENABLED, value: 'false', description: 'Enable automatic payout processing' },

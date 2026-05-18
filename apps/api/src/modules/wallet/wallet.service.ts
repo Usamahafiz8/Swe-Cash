@@ -7,6 +7,7 @@ import {
 import { TransactionType, TransactionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CurrencyService } from '../currency/currency.service';
+import { SettingsService } from '../settings/settings.service';
 import { TransactionsQueryDto } from './dto/transactions-query.dto';
 
 export interface CreditParams {
@@ -32,6 +33,7 @@ export class WalletService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly currencyService: CurrencyService,
+    private readonly settings: SettingsService,
   ) {}
 
   // ─── Public Read ────────────────────────────────────────────────────────────
@@ -51,12 +53,18 @@ export class WalletService {
     const lifetime  = wallet.lifetimeEarnings.toNumber();
     const payouts   = wallet.lifetimePayouts.toNumber();
 
+    const target = this.settings.minPayoutThreshold;
+    const targetProgress = Math.min(Math.floor((available / target) * 100), 100);
+
     return {
       // Raw USD values always included
       availableBalanceUsd: available,
       pendingBalanceUsd:   pending,
       lifetimeEarningsUsd: lifetime,
       lifetimePayoutsUsd:  payouts,
+      // Target reward progress toward minimum payout threshold
+      targetRewardUsd:      target,
+      targetRewardProgress: targetProgress,
       // Converted to user's preferred currency
       currency,
       symbol:              this.currencyService.getSymbol(currency),

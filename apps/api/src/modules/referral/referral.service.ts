@@ -87,7 +87,8 @@ export class ReferralService {
   // ─── Stats ────────────────────────────────────────────────────────────────
 
   async getStats(userId: string) {
-    const [directReferrals, commissions] = await Promise.all([
+    const [user, directReferrals, commissions] = await Promise.all([
+      this.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { referralCode: true } }),
       this.prisma.referral.count({
         where: { referrerUserId: userId, level: 1 },
       }),
@@ -103,6 +104,12 @@ export class ReferralService {
     );
 
     return {
+      referralCode: user.referralCode,
+      commissionRates: {
+        level1: this.settings.referralCommissionL1,
+        level2: this.settings.referralCommissionL2,
+        level3: this.settings.referralCommissionL3,
+      },
       directReferrals,
       totalCommissionEarned: totalCommission,
       activeReferrals: commissions.filter((r) => r.isActive).length,
