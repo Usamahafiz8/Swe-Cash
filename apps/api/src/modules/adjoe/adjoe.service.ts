@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FraudStatus, TaskTriggerType } from '@prisma/client';
+import { FraudStatus, AccountStatus, TaskTriggerType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { ReferralService } from '../referral/referral.service';
@@ -21,6 +21,29 @@ export class AdjoeService {
   ) {
     this.s2sToken = config.get<string>('ADJOE_S2S_TOKEN', '');
   }
+
+  // ─── Unity SDK Init ──────────────────────────────────────────────────────────
+
+  async getSdkConfig(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { id: true, fraudStatus: true, accountStatus: true },
+    });
+
+    if (user.accountStatus !== AccountStatus.active) {
+      throw new ForbiddenException('Account is not active.');
+    }
+    if (user.fraudStatus === FraudStatus.blocked) {
+      throw new ForbiddenException('Account is fraud-blocked.');
+    }
+
+    return {
+      publisherSubId: user.id,
+      sdkHash: this.config.get<string>('ADJOE_SDK_HASH', ''),
+    };
+  }
+
+  // ─── S2S Postback ─────────────────────────────────────────────────────────────
 
   /**
    * Handles Adjoe S2S postback.

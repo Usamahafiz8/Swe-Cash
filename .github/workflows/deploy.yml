@@ -55,7 +55,7 @@ jobs:
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: build   # only runs if build job passes
+    needs: build
 
     steps:
       - name: Deploy via SSH
@@ -63,20 +63,44 @@ jobs:
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          password: ${{ secrets.DEPLOY_SSH_PASSWORD }}
           port: 22
           script: |
             set -e
 
             echo "── Pulling latest code ──"
             cd /root/Swe-Cash
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "── Rebuilding and restarting containers ──"
             docker compose up -d --build --remove-orphans
 
+            echo "── Waiting for API to be healthy ──"
+            for i in $(seq 1 15); do
+              STATUS=$(docker compose ps --format json api 2>/dev/null | grep -o '"Health":"[^"]*"' | cut -d'"' -f4 || echo "unknown")
+              echo "  attempt $i — status: $STATUS"
+              if [ "$STATUS" = "healthy" ] || docker compose ps api | grep -q "Up"; then
+                echo "  API is up"
+                break
+              fi
+              sleep 3
+            done
+
+            echo "── Patching L2 referral commission to 10% ──"
+            docker compose exec -T api node -e "
+              process.chdir('/app');
+              const { PrismaClient } = require('.prisma/client');
+              const p = new PrismaClient();
+              p.setting.upsert({
+                where: { key: 'referral_commission_level_2' },
+                update: { value: '0.10', updatedBy: 'deploy' },
+                create: { key: 'referral_commission_level_2', value: '0.10', updatedBy: 'deploy' }
+              }).then(() => { console.log('L2 commission set to 10%'); return p.\$disconnect(); }).catch(e => { console.error(e); process.exit(1); });
+            " || echo "⚠ L2 patch skipped (non-fatal)"
+
             echo "── Removing dangling images ──"
-            docker image prune -f
+            docker image prune -f || true
 
             echo "── Deployment complete ──"
             docker compose ps
