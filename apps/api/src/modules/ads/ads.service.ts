@@ -57,6 +57,22 @@ export class AdsService {
 
     const potentialReward = parseFloat((lastAdjoeReward.amount.toNumber() * 0.1).toFixed(4));
 
+    // Record that the user opened the ad screen (non-blocking)
+    // Saved as ad_impression so we can track: opens vs claims, daily frequency, fraud
+    this.prisma.transaction.create({
+      data: {
+        userId,
+        amount: 0,
+        type: 'ad_impression',
+        status: 'completed',
+        referenceId: lastAdjoeReward.id,
+        metadata: {
+          adjoe_tx_id: lastAdjoeReward.id,
+          potential_reward: potentialReward,
+        },
+      },
+    }).catch((err) => this.logger.error('Ad impression record failed', err));
+
     return {
       eligible: true,
       instant: true,

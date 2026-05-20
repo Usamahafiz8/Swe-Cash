@@ -31,6 +31,7 @@ enum TransactionType {
   payout_rejected
   transfer_out
   transfer_in
+  ad_impression
 }
 
 enum TransactionStatus {
