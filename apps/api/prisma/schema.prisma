@@ -350,6 +350,19 @@ model Setting {
   @@map("settings")
 }
 
+// ─── REWARD CARDS ─────────────────────────────────────────────────────────────
+
+model RewardCard {
+  id        String   @id @default(uuid())
+  amount    Decimal  @db.Decimal(10, 4)
+  badge     String?                       // e.g. "TOP VALUE", null for most cards
+  isActive  Boolean  @default(true)  @map("is_active")
+  sortOrder Int      @default(0)     @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("reward_cards")
+}
+
 // ─── ADMINS ───────────────────────────────────────────────────────────────────
 
 model Admin {

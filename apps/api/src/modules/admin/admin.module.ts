@@ -13,6 +13,7 @@ import { SettingsModule } from '../settings/settings.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CurrencyModule } from '../currency/currency.module';
 import { TasksModule } from '../tasks/tasks.module';
+import { RewardCardsModule } from '../reward-cards/reward-cards.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { TasksModule } from '../tasks/tasks.module';
     NotificationsModule,
     CurrencyModule,
     TasksModule,
+    RewardCardsModule,
   ],
   controllers: [AdminController],
   providers: [AdminAuthService, AdminUsersService, AdminJwtStrategy],

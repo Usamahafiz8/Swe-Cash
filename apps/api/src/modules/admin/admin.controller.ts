@@ -30,6 +30,8 @@ import { CurrencyService } from '../currency/currency.service';
 import { CreateCurrencyDto, UpdateCurrencyDto } from '../currency/dto/currency.dto';
 import { TasksService } from '../tasks/tasks.service';
 import { CreateTaskDto, UpdateTaskDto } from '../tasks/dto/tasks.dto';
+import { RewardCardsService } from '../reward-cards/reward-cards.service';
+import { CreateRewardCardDto, UpdateRewardCardDto } from '../reward-cards/dto/reward-card.dto';
 import { RecurringNotificationsService } from '../notifications/recurring-notifications.service';
 import { CreateRecurringNotificationDto } from '../notifications/dto/recurring-notification.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
@@ -58,6 +60,7 @@ export class AdminController {
     private readonly currencyService: CurrencyService,
     private readonly recurringService: RecurringNotificationsService,
     private readonly tasksService: TasksService,
+    private readonly rewardCardsService: RewardCardsService,
   ) {}
 
   @Post('auth/login')
@@ -343,5 +346,41 @@ export class AdminController {
   @ApiParam({ name: 'id', description: 'Task UUID' })
   deleteTask(@Param('id') id: string) {
     return this.tasksService.adminDelete(id);
+  }
+
+  // ─── Reward Cards ─────────────────────────────────────────────────────────────
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Get('reward-cards')
+  @ApiOperation({ summary: 'List all reward cards (active and inactive)' })
+  listRewardCards() {
+    return this.rewardCardsService.adminList();
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Post('reward-cards')
+  @ApiOperation({ summary: 'Create a new reward card (e.g. $15.00 TOP VALUE)' })
+  createRewardCard(@Body() dto: CreateRewardCardDto) {
+    return this.rewardCardsService.adminCreate(dto);
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Patch('reward-cards/:id')
+  @ApiOperation({ summary: 'Update a reward card amount, badge, active status or sort order' })
+  @ApiParam({ name: 'id', description: 'RewardCard UUID' })
+  updateRewardCard(@Param('id') id: string, @Body() dto: UpdateRewardCardDto) {
+    return this.rewardCardsService.adminUpdate(id, dto);
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Delete('reward-cards/:id')
+  @ApiOperation({ summary: 'Delete a reward card' })
+  @ApiParam({ name: 'id', description: 'RewardCard UUID' })
+  deleteRewardCard(@Param('id') id: string) {
+    return this.rewardCardsService.adminDelete(id);
   }
 }

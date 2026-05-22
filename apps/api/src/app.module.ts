@@ -17,6 +17,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { CurrencyModule } from './modules/currency/currency.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { CountriesModule } from './modules/countries/countries.module';
+import { RewardCardsModule } from './modules/reward-cards/reward-cards.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { CountriesModule } from './modules/countries/countries.module';
     CurrencyModule,
     TasksModule,
     CountriesModule,
+    RewardCardsModule,
     AdminModule,
   ],
 })
