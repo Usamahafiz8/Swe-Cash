@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse } from '@nestjs/swa
 import { WalletService } from './wallet.service';
 import { TransactionsQueryDto } from './dto/transactions-query.dto';
 import { TransferDto } from './dto/transfer.dto';
+import { HistoryQueryDto } from './dto/history-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequestUser } from '../auth/strategies/jwt.strategy';
@@ -28,9 +29,18 @@ export class WalletController {
     return this.walletService.transfer(user.id, dto.recipientCode, dto.amount);
   }
 
+  @Get('history')
+  @ApiOperation({ summary: 'Unified activity history — all earnings + payouts in one feed (use this for the History screen)' })
+  @ApiOkResponse({
+    description: 'Merged and sorted list of transactions and payouts. Filter by status: all | pending | approved | rejected',
+  })
+  getHistory(@CurrentUser() user: RequestUser, @Query() query: HistoryQueryDto) {
+    return this.walletService.getHistory(user.id, query);
+  }
+
   @Get('transactions')
-  @ApiOperation({ summary: 'Get paginated transaction history' })
-  @ApiOkResponse({ description: 'Paginated ledger entries — includes transfer_in, transfer_out, adjoe_reward, ad_reward, referral_reward, bonus, payout_request' })
+  @ApiOperation({ summary: 'Raw ledger entries (internal use — use /history for the History screen UI)' })
+  @ApiOkResponse({ description: 'Paginated ledger entries' })
   getTransactions(
     @CurrentUser() user: RequestUser,
     @Query() query: TransactionsQueryDto,

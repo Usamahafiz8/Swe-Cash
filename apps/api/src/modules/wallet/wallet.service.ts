@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CurrencyService } from '../currency/currency.service';
 import { SettingsService } from '../settings/settings.service';
 import { TransactionsQueryDto } from './dto/transactions-query.dto';
+import { HistoryQueryDto, HistoryStatusFilter } from './dto/history-query.dto';
 
 export interface CreditParams {
   userId: string;
@@ -175,6 +176,102 @@ export class WalletService {
       page,
       limit,
       pages: Math.ceil(total / limit),
+    };
+  }
+
+  // ─── Unified Activity History ─────────────────────────────────────────────
+
+  async getHistory(userId: string, query: HistoryQueryDto) {
+    const { status = HistoryStatusFilter.all, page = 1, limit = 20 } = query;
+    const skip = (page - 1) * limit;
+
+    // Map UI tab → DB status filters
+    const txStatuses: TransactionStatus[] = status === 'all'
+      ? [TransactionStatus.pending, TransactionStatus.completed, TransactionStatus.rejected]
+      : status === 'pending'  ? [TransactionStatus.pending]
+      : status === 'approved' ? [TransactionStatus.completed]
+      : [TransactionStatus.rejected];
+
+    const payoutStatuses = status === 'all'
+      ? ['pending', 'approved', 'completed', 'rejected', 'frozen']
+      : status === 'pending'  ? ['pending', 'frozen']
+      : status === 'approved' ? ['approved', 'completed']
+      : ['rejected'];
+
+    // Exclude internal/noise transaction types from the history feed
+    const excludedTypes: TransactionType[] = [
+      TransactionType.payout_request,
+      TransactionType.payout_completed,
+      TransactionType.payout_rejected,
+      TransactionType.ad_impression,
+    ];
+
+    const [txItems, txTotal, payoutItems, payoutTotal] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where: { userId, status: { in: txStatuses }, type: { notIn: excludedTypes } },
+        orderBy: { createdAt: 'desc' },
+        take: limit + skip,
+      }),
+      this.prisma.transaction.count({
+        where: { userId, status: { in: txStatuses }, type: { notIn: excludedTypes } },
+      }),
+      this.prisma.payout.findMany({
+        where: { userId, status: { in: payoutStatuses as any } },
+        orderBy: { createdAt: 'desc' },
+        take: limit + skip,
+      }),
+      this.prisma.payout.count({
+        where: { userId, status: { in: payoutStatuses as any } },
+      }),
+    ]);
+
+    // Normalise both into a unified shape
+    const LABELS: Partial<Record<TransactionType, string>> = {
+      adjoe_reward:    'ADJOE - GAME',
+      ad_reward:       'Watch Ad & Earn',
+      referral_reward: 'Referral Bonus',
+      bonus:           'Bonus Reward',
+      transfer_in:     'Transfer Received',
+      transfer_out:    'Transfer Sent',
+    };
+
+    const normalised = [
+      ...txItems.map((t) => ({
+        id:          t.id,
+        source:      'transaction' as const,
+        type:        t.type,
+        label:       LABELS[t.type] ?? t.type,
+        amount:      t.amount.toNumber(),
+        sign:        t.type === TransactionType.transfer_out ? '-' : '+',
+        status:      t.status === 'completed' ? 'approved' : t.status,
+        statusLabel: t.status === 'completed' ? 'Approved' : t.status.charAt(0).toUpperCase() + t.status.slice(1),
+        date:        t.createdAt,
+        metadata:    t.metadata,
+      })),
+      ...payoutItems.map((p) => ({
+        id:          p.id,
+        source:      'payout' as const,
+        type:        'payout',
+        label:       'PayPal Payout',
+        amount:      p.amount.toNumber(),
+        sign:        '-',
+        status:      ['approved', 'completed'].includes(p.status) ? 'approved' : p.status,
+        statusLabel: ['approved', 'completed'].includes(p.status) ? 'Approved'
+                     : p.status === 'frozen' ? 'Pending'
+                     : p.status.charAt(0).toUpperCase() + p.status.slice(1),
+        date:        p.createdAt,
+        metadata:    { paypalEmail: p.paypalEmail },
+      })),
+    ]
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .slice(skip, skip + limit);
+
+    return {
+      items: normalised,
+      total: txTotal + payoutTotal,
+      page,
+      limit,
+      pages: Math.ceil((txTotal + payoutTotal) / limit),
     };
   }
 
