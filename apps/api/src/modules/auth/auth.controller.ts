@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, Get, Query, Res } from '@nestjs/common';
+import { Controller, Post, Body, Req, Get, Query, Res, BadRequestException } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -30,9 +30,14 @@ export class AuthController {
   @ApiExcludeEndpoint()
   async googleCallback(
     @Query('code') code: string,
+    @Query('error') error: string,
     @Req() req: Request,
     @Res() res: Response,
   ) {
+    if (error || !code) {
+      throw new BadRequestException(error ?? 'Missing authorization code from Google.');
+    }
+
     const ipAddress =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
       req.socket.remoteAddress ??
