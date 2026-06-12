@@ -1,7 +1,5 @@
 node_modules/
 dist/
-.env
-.env.production
 *.local
 
 # Prisma
@@ -18,3 +16,4 @@ pnpm-debug.log*
 
 # OS
 .DS_Store
+config.bat
