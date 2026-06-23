@@ -21,7 +21,7 @@ const FRAUD_STATUSES = ['', 'pending', 'reviewed', 'dismissed', 'escalated'];
 
 export default function FraudPage() {
   const qc = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('');
   const [toast, setToast] = useState('');
 
   const showToast = (msg: string) => {
@@ -127,42 +127,41 @@ export default function FraudPage() {
                   <TableCell className="text-gray-500">{formatDate(log.createdAt)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1.5">
-                      {log.status === 'pending' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="success"
-                            loading={reviewMutation.isPending}
-                            onClick={() =>
-                              reviewMutation.mutate({ id: log.id, status: 'reviewed' })
-                            }
-                          >
-                            Review
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            loading={reviewMutation.isPending}
-                            onClick={() =>
-                              reviewMutation.mutate({ id: log.id, status: 'dismissed' })
-                            }
-                          >
-                            Dismiss
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            loading={reviewMutation.isPending}
-                            onClick={() =>
-                              reviewMutation.mutate({ id: log.id, status: 'escalated' })
-                            }
-                          >
-                            Escalate
-                          </Button>
-                        </>
+                      {log.status !== 'reviewed' && (
+                        <Button
+                          size="sm"
+                          variant="success"
+                          loading={reviewMutation.isPending}
+                          onClick={() =>
+                            reviewMutation.mutate({ id: log.id, status: 'reviewed' })
+                          }
+                        >
+                          Review
+                        </Button>
                       )}
-                      {log.status !== 'pending' && (
-                        <span className="text-xs text-gray-400 italic">No actions</span>
+                      {log.status !== 'dismissed' && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={reviewMutation.isPending}
+                          onClick={() =>
+                            reviewMutation.mutate({ id: log.id, status: 'dismissed' })
+                          }
+                        >
+                          Dismiss
+                        </Button>
+                      )}
+                      {log.status !== 'escalated' && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          loading={reviewMutation.isPending}
+                          onClick={() =>
+                            reviewMutation.mutate({ id: log.id, status: 'escalated' })
+                          }
+                        >
+                          Escalate
+                        </Button>
                       )}
                     </div>
                   </TableCell>
