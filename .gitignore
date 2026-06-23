@@ -16,3 +16,10 @@ pnpm-debug.log*
 
 # OS
 .DS_Store
+
+# Environment files (never commit secrets)
+!.env.example
+
+# Claude
+.claude/
+config.bat
