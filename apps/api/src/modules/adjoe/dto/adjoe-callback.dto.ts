@@ -1,37 +1,38 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
-import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export class AdjoeCallbackDto {
-  @ApiProperty({ description: 'S2S security token from Adjoe' })
-  @IsString()
-  token: string;
-
-  @ApiProperty({ description: 'Unique transaction ID from Adjoe (used for deduplication)' })
-  @IsString()
-  transaction_id: string;
-
-  @ApiProperty({ description: 'Our user ID passed as publisher_sub_id to Adjoe SDK' })
-  @IsString()
-  publisher_sub_id: string;
-
-  @ApiProperty({ description: 'Reward amount in USD', example: 0.005 })
-  @Type(() => Number)
-  @IsNumber()
-  reward: number;
-
-  @ApiPropertyOptional({ description: 'Currency code', example: 'USD' })
-  @IsOptional()
-  @IsString()
+/**
+ * Adjoe Playtime S2S reward postback.
+ *
+ * IMPORTANT: Adjoe sends this as an HTTP **GET** with **query-string** params —
+ * NOT a POST with a JSON body. The field names below are Adjoe's real macro
+ * names, captured from production callback traffic:
+ *
+ *   GET /api/v1/adjoe/callback
+ *       ?coin_amount=1
+ *       &currency=USD
+ *       &placement=null
+ *       &sid=17d610c6dfba2821ee9689a91a420722af7e238b   (SHA1 signature)
+ *       &trans_uuid=df881163-d470-4c1b-a7ee-e1ec098ad0b0
+ *       &user_uuid=242950bd-3dee-462a-bfac-a21e20b3fa15
+ *       &ua_channel=null&ua_network=null
+ *       &ua_subpublisher_cleartext=null&ua_subpublisher_encrypted=null
+ *
+ * This is an INTERFACE, not a validated class DTO, on purpose: the global
+ * ValidationPipe runs with forbidNonWhitelisted=true, which would reject the
+ * request outright the moment Adjoe includes a param we didn't declare. The
+ * controller reads the raw query and the service parses it defensively.
+ */
+export interface AdjoeCallbackQuery {
+  /** Adjoe transaction UUID — unique per reward event; our dedup key. */
+  trans_uuid?: string;
+  /** Reward amount in Adjoe COINS (integer), e.g. "1". NOT USD. */
+  coin_amount?: string;
+  /** The publisher user identifier Adjoe echoes back (what we set at SDK init). */
+  user_uuid?: string;
+  /** Adjoe S2S signature hash (SHA1) used to verify the callback is genuine. */
+  sid?: string;
+  /** Currency label of the coin balance (informational). */
   currency?: string;
-
-  @ApiPropertyOptional({ description: 'Adjoe app/campaign ID' })
-  @IsOptional()
-  @IsString()
-  app_id?: string;
-
-  @ApiPropertyOptional({ description: 'Google Advertising ID of the device' })
-  @IsOptional()
-  @IsString()
-  gaid?: string;
+  /** Adjoe placement identifier (informational). */
+  placement?: string;
+  /** Any other params Adjoe appends (ua_channel, ua_network, …) pass through as metadata. */
+  [key: string]: string | undefined;
 }
