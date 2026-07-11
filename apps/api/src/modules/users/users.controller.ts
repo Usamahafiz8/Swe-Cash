@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Delete, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequestUser } from '../auth/strategies/jwt.strategy';
@@ -28,10 +29,19 @@ export class UsersController {
   }
 
   @Delete('account')
-  @ApiOperation({ summary: 'Permanently delete account (App Store compliance). Anonymises PII; financial records kept for legal audit.' })
+  @ApiOperation({
+    summary:
+      'Permanently delete account (App Store compliance). Anonymises PII and forfeits any ' +
+      'remaining balance; financial records kept for legal audit.',
+  })
   @ApiOkResponse({ description: 'Account deleted' })
-  @ApiResponse({ status: 400, description: 'Balance or pending payout exists — must resolve first' })
-  deleteAccount(@CurrentUser() user: RequestUser) {
-    return this.usersService.deleteAccount(user.id);
+  @ApiResponse({
+    status: 400,
+    description:
+      'Withdrawable balance exists (at or above the payout minimum). Retry with ' +
+      'forfeitBalance=true to confirm giving it up.',
+  })
+  deleteAccount(@CurrentUser() user: RequestUser, @Query() dto: DeleteAccountDto) {
+    return this.usersService.deleteAccount(user.id, dto);
   }
 }
