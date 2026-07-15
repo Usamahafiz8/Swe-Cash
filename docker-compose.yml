@@ -21,6 +21,12 @@ services:
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
       ADJOE_SDK_HASH: ${ADJOE_SDK_HASH}
       ADJOE_S2S_TOKEN: ${ADJOE_S2S_TOKEN}
+      # Reward pricing + callback tuning. Without these the container falls back to
+      # code defaults (coin rate 0 → every game-reward callback is rejected 5xx and
+      # nothing is credited). MUST be set in the server's root .env before go-live.
+      ADJOE_COIN_TO_USD: ${ADJOE_COIN_TO_USD}
+      ADJOE_USER_ID_PARAM: ${ADJOE_USER_ID_PARAM}
+      ADJOE_VERIFY_SIGNATURE: ${ADJOE_VERIFY_SIGNATURE}
       PAYPAL_MODE: live
       PAYPAL_LIVE_CLIENT_ID: ${PAYPAL_LIVE_CLIENT_ID}
       PAYPAL_LIVE_SECRET: ${PAYPAL_LIVE_SECRET}

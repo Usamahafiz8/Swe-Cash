@@ -95,6 +95,14 @@ export class AdjoeService {
       where: { referenceId: transId },
     });
     if (existing) {
+      // Recovery: a prior delivery credited but a retry arrived before the
+      // pending→available release completed. Finish it now so a reward can never
+      // get stuck in pending (there is no other path that releases adjoe rewards).
+      if (existing.status === 'pending') {
+        await this.walletService
+          .releasePending(existing.id)
+          .catch((err) => this.logger.error(`Adjoe: re-release failed tx=${transId}`, err as Error));
+      }
       this.logger.log(`Adjoe: duplicate tx=${transId} — skipped`);
       return { ok: true };
     }
@@ -128,7 +136,12 @@ export class AdjoeService {
       return { ok: true };
     }
 
-    // ── 6. Credit (lands in pending; released to available on approval/delay) ──
+    // ── 6. Credit, then release to available immediately ──────────────────────
+    // Consistent with ad_reward / task / bonus, which all auto-release. This
+    // system's fraud gate is at PAYOUT time, not reward time — there is no
+    // transaction-approval endpoint, so a reward left in `pending` would be stuck
+    // forever: never withdrawable, never unlocking the Watch-Ad button, never
+    // firing earning-milestone tasks (all of which require status 'completed').
     try {
       const ledgerEntry = await this.walletService.credit({
         userId: user.id,
@@ -144,8 +157,12 @@ export class AdjoeService {
         },
       });
 
+      // Move pending → available now. If this throws, the catch below returns 5xx
+      // and Adjoe redelivers; the dedup branch then finishes the release.
+      await this.walletService.releasePending(ledgerEntry.id);
+
       this.logger.log(
-        `Adjoe: credited $${usd} (${coins} coins) to user=${user.id} tx=${transId}`,
+        `Adjoe: credited $${usd} (${coins} coins) to user=${user.id} tx=${transId} — released to available`,
       );
 
       // Referral commissions (non-blocking)
