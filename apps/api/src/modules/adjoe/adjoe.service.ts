@@ -37,7 +37,14 @@ export class AdjoeService {
     private readonly config: ConfigService,
   ) {
     this.coinToUsd = Number(config.get<string>('ADJOE_COIN_TO_USD', '')) || 0;
-    this.userIdParam = config.get<string>('ADJOE_USER_ID_PARAM', 'user_uuid');
+    // NB: docker-compose passes ${ADJOE_USER_ID_PARAM} as an EMPTY string when the
+    // host env doesn't define it — and "" is a *defined* value, so ConfigService's
+    // default ('user_uuid') never kicks in. Without the `|| 'user_uuid'` guard,
+    // userIdParam becomes '' and query[''] is always undefined, so EVERY callback
+    // looks "malformed" and every reward is silently dropped. (Root cause of users
+    // earning in Adjoe but never being credited.)
+    this.userIdParam =
+      (config.get<string>('ADJOE_USER_ID_PARAM', 'user_uuid') || 'user_uuid').trim();
     this.verifySignature = config.get<string>('ADJOE_VERIFY_SIGNATURE', 'false') === 'true';
     this.s2sSecret = config.get<string>('ADJOE_S2S_TOKEN', '');
   }
