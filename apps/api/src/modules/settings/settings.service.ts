@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 // All keys that exist in the settings table
 export const SETTING_KEYS = {
+  ADJOE_COIN_TO_USD: 'adjoe_coin_to_usd',
   ADJOE_REWARD_PER_MILESTONE: 'adjoe_reward_per_milestone',
   AD_REWARD_PER_VIEW: 'ad_reward_per_view',
   MIN_PAYOUT_THRESHOLD: 'min_payout_threshold',
@@ -88,6 +89,11 @@ export class SettingsService implements OnModuleInit {
     return this.getNumber(SETTING_KEYS.MIN_PAYOUT_THRESHOLD, 1.0);
   }
 
+  /** USD value of one Adjoe coin, editable live from the admin dashboard. 0 = not configured. */
+  get adjoeCoinToUsd() {
+    return this.getNumber(SETTING_KEYS.ADJOE_COIN_TO_USD, 0);
+  }
+
   get payoutAutoApproveEnabled() {
     return this.getBoolean(SETTING_KEYS.PAYOUT_AUTO_APPROVE_ENABLED, false);
   }
@@ -100,6 +106,7 @@ export class SettingsService implements OnModuleInit {
 
   private async seed() {
     const defaults: Array<{ key: string; value: string; description: string }> = [
+      { key: SETTING_KEYS.ADJOE_COIN_TO_USD, value: '0', description: 'USD value of ONE Adjoe coin. 0 = not configured (game rewards are held, NOT credited). Set to 1 / (coins per $1 from the Adjoe dashboard). E.g. 100 coins=$1 -> 0.01, 1000 coins=$1 -> 0.001, 1 coin=$1 -> 1.' },
       { key: SETTING_KEYS.REFERRAL_COMMISSION_L1, value: '0.15', description: '15% commission for Level 1 referrals' },
       { key: SETTING_KEYS.REFERRAL_COMMISSION_L2, value: '0.12', description: '12% commission for Level 2 referrals' },
       { key: SETTING_KEYS.REFERRAL_COMMISSION_L3, value: '0.05', description: '5% commission for Level 3 referrals' },

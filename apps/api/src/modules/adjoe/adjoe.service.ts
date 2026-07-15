@@ -11,13 +11,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { ReferralService } from '../referral/referral.service';
 import { TasksService } from '../tasks/tasks.service';
+import { SettingsService } from '../settings/settings.service';
 import { AdjoeCallbackQuery } from './dto/adjoe-callback.dto';
 
 @Injectable()
 export class AdjoeService {
   private readonly logger = new Logger(AdjoeService.name);
 
-  /** USD value of one Adjoe coin. 0 = not configured → callbacks are re-queued, not credited wrong. */
+  /** Env fallback for the coin→USD rate. Primary source is the admin-editable
+   *  `adjoe_coin_to_usd` setting; this is used only when that setting is unset/0. */
   private readonly coinToUsd: number;
   /** Which query param carries our user id (Adjoe echoes back what we set at SDK init). */
   private readonly userIdParam: string;
@@ -31,6 +33,7 @@ export class AdjoeService {
     private readonly walletService: WalletService,
     private readonly referralService: ReferralService,
     private readonly tasksService: TasksService,
+    private readonly settings: SettingsService,
     private readonly config: ConfigService,
   ) {
     this.coinToUsd = Number(config.get<string>('ADJOE_COIN_TO_USD', '')) || 0;
@@ -122,15 +125,19 @@ export class AdjoeService {
     }
 
     // ── 5. Coins → USD ────────────────────────────────────────────────────────
-    if (this.coinToUsd <= 0) {
+    // Rate is admin-editable live from the dashboard (Settings → adjoe_coin_to_usd);
+    // falls back to the ADJOE_COIN_TO_USD env var only when the setting is unset/0.
+    const coinToUsd = this.settings.adjoeCoinToUsd || this.coinToUsd;
+    if (coinToUsd <= 0) {
       // Config missing — do NOT guess a value for real money. Ask Adjoe to retry.
       this.logger.error(
-        `Adjoe: ADJOE_COIN_TO_USD not configured — cannot price ${coins} coins (tx=${transId}). ` +
-          `Reward NOT credited; Adjoe will retry. Set ADJOE_COIN_TO_USD to enable payouts.`,
+        `Adjoe: coin→USD rate not configured — cannot price ${coins} coins (tx=${transId}). ` +
+          `Reward NOT credited; Adjoe will retry. Set the "adjoe_coin_to_usd" setting ` +
+          `(admin dashboard) or the ADJOE_COIN_TO_USD env var to enable payouts.`,
       );
       throw new ServiceUnavailableException('Reward pricing not configured.');
     }
-    const usd = Number((coins * this.coinToUsd).toFixed(4));
+    const usd = Number((coins * coinToUsd).toFixed(4));
     if (usd <= 0) {
       this.logger.warn(`Adjoe: non-positive reward (${coins} coins → $${usd}) tx=${transId} — skipped`);
       return { ok: true };
@@ -150,7 +157,7 @@ export class AdjoeService {
         referenceId: transId,
         metadata: {
           coin_amount: coins,
-          coin_to_usd: this.coinToUsd,
+          coin_to_usd: coinToUsd,
           currency: query.currency ?? 'USD',
           placement: query.placement ?? null,
           adjoe_user_uuid: query.user_uuid ?? null,
