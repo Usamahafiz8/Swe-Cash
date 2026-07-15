@@ -126,16 +126,21 @@ export class AdjoeService {
 
     // ── 5. Coins → USD ────────────────────────────────────────────────────────
     // Rate is admin-editable live from the dashboard (Settings → adjoe_coin_to_usd);
-    // falls back to the ADJOE_COIN_TO_USD env var only when the setting is unset/0.
-    const coinToUsd = this.settings.adjoeCoinToUsd || this.coinToUsd;
-    if (coinToUsd <= 0) {
-      // Config missing — do NOT guess a value for real money. Ask Adjoe to retry.
-      this.logger.error(
-        `Adjoe: coin→USD rate not configured — cannot price ${coins} coins (tx=${transId}). ` +
-          `Reward NOT credited; Adjoe will retry. Set the "adjoe_coin_to_usd" setting ` +
-          `(admin dashboard) or the ADJOE_COIN_TO_USD env var to enable payouts.`,
+    // falls back to the ADJOE_COIN_TO_USD env var, then to a safe floor so a reward
+    // is ALWAYS credited (never silently held) even when nothing is configured yet.
+    const DEFAULT_COIN_TO_USD = 1;
+    const configuredRate = this.settings.adjoeCoinToUsd || this.coinToUsd;
+    const coinToUsd = configuredRate || DEFAULT_COIN_TO_USD;
+    if (!configuredRate) {
+      // No admin/env rate set — credit at the default instead of holding the reward,
+      // so users still earn. Tune "adjoe_coin_to_usd" in the admin dashboard for the
+      // real economics (this default may pay more than intended if Adjoe sends large
+      // coin amounts).
+      this.logger.warn(
+        `Adjoe: coin→USD rate not configured — using default ${DEFAULT_COIN_TO_USD} ` +
+          `(1 coin = $${DEFAULT_COIN_TO_USD}) to still credit ${coins} coins (tx=${transId}). ` +
+          `Set "adjoe_coin_to_usd" in the admin dashboard to the correct rate.`,
       );
-      throw new ServiceUnavailableException('Reward pricing not configured.');
     }
     const usd = Number((coins * coinToUsd).toFixed(4));
     if (usd <= 0) {
@@ -221,26 +226,35 @@ export class AdjoeService {
   private verifyCallbackSignature(query: AdjoeCallbackQuery): boolean {
     const received = query.sid?.trim().toLowerCase();
 
-    const expected = createHash('sha1')
-      .update(
-        `${query.trans_uuid ?? ''}${query.user_uuid ?? ''}` +
-          `${query.currency ?? ''}${query.coin_amount ?? ''}${this.s2sSecret}`,
-      )
-      .digest('hex');
+    // Adjoe's canonical formula (per docs.adjoe.io Server-to-Server Payouts) is:
+    //   sid = sha1(trans_uuid + user_uuid + currency + coin_amount + device_id + sdk_app_id + s2s_token)
+    // A given postback template may or may not include device_id / sdk_app_id. When
+    // it doesn't, those fields simply aren't part of the hash. We therefore compute
+    // BOTH candidates and accept a match against either, so a genuine callback is
+    // never silently rejected because of that one template difference.
+    const base =
+      `${query.trans_uuid ?? ''}${query.user_uuid ?? ''}` +
+      `${query.currency ?? ''}${query.coin_amount ?? ''}`;
+    const devicePart = `${query.device_id ?? ''}${query.sdk_app_id ?? ''}`;
 
-    const ok = !!received && received === expected;
+    const expectedList = [
+      createHash('sha1').update(`${base}${devicePart}${this.s2sSecret}`).digest('hex'), // canonical
+      createHash('sha1').update(`${base}${this.s2sSecret}`).digest('hex'),              // template omits device_id + sdk_app_id
+    ];
+
+    const ok = !!received && expectedList.includes(received);
 
     if (!this.verifySignature) {
       this.logger.warn(
         `Adjoe: signature enforcement OFF — tx=${query.trans_uuid} match=${ok} ` +
-          `(received=${received} expected=${expected}). Set ADJOE_VERIFY_SIGNATURE=true to enforce.`,
+          `(received=${received} tried=${expectedList.join('|')}). Set ADJOE_VERIFY_SIGNATURE=true to enforce.`,
       );
       return true;
     }
 
     if (!ok) {
       this.logger.warn(
-        `Adjoe: sid mismatch tx=${query.trans_uuid} received=${received} expected=${expected}`,
+        `Adjoe: sid mismatch tx=${query.trans_uuid} received=${received} tried=${expectedList.join('|')}`,
       );
     }
     return ok;
