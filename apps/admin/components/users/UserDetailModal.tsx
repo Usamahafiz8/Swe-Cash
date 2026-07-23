@@ -30,6 +30,7 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
   const [statusReason, setStatusReason] = useState('');
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
+  const [clearReason, setClearReason] = useState('');
   const [actionMsg, setActionMsg] = useState('');
 
   const { data: user, isLoading } = useQuery({
@@ -67,6 +68,18 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
       setAdjustReason('');
     },
     onError: () => setActionMsg('Failed to adjust balance.'),
+  });
+
+  const clearFraudMutation = useMutation({
+    mutationFn: () => usersApi.clearFraud(userId!, clearReason),
+    onSuccess: () => {
+      setActionMsg('Fraud flag cleared. Payouts are no longer held for this user.');
+      qc.invalidateQueries({ queryKey: ['user', userId] });
+      qc.invalidateQueries({ queryKey: ['user-fraud', userId] });
+      qc.invalidateQueries({ queryKey: ['users'] });
+      setClearReason('');
+    },
+    onError: () => setActionMsg('Failed to clear fraud flag.'),
   });
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
@@ -240,7 +253,40 @@ export function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
 
             {/* Fraud Logs Tab */}
             {tab === 'fraud' && (
-              <div>
+              <div className="space-y-4">
+                {/* Current fraud status — `suspicious` and `blocked` both hold payouts,
+                    and nothing clears them automatically. */}
+                {user.fraudStatus && user.fraudStatus !== 'normal' && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <h3 className="text-sm font-semibold text-amber-900">
+                        Fraud status: {user.fraudStatus} — payouts are held
+                      </h3>
+                    </div>
+                    <p className="mt-1 text-sm text-amber-700">
+                      Reviewing the logs below does not lift this. Clearing sets the user
+                      back to normal and keeps the existing logs as an audit trail.
+                    </p>
+                    <div className="mt-3 space-y-3">
+                      <Input
+                        label="Reason"
+                        placeholder="Why is this not fraud?"
+                        value={clearReason}
+                        onChange={(e) => setClearReason(e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => clearFraudMutation.mutate()}
+                        disabled={!clearReason}
+                        loading={clearFraudMutation.isPending}
+                      >
+                        Clear Fraud Flag
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {fraudLoading ? (
                   <div className="flex justify-center py-8">
                     <Spinner />

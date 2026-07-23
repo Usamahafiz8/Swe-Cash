@@ -66,6 +66,8 @@ export interface User {
   referralCode?: string;
   referredBy?: string;
   fraudScore?: number;
+  /** Only returned by the detail endpoint. `suspicious` / `blocked` hold payouts. */
+  fraudStatus?: 'normal' | 'suspicious' | 'blocked';
 }
 
 export interface FraudLog {
@@ -109,6 +111,9 @@ export const usersApi = {
 
   escalateFraud: (id: string, status: string) =>
     apiClient.patch(`/admin/users/${id}/fraud-escalate`, { status }),
+
+  clearFraud: (id: string, reason: string) =>
+    apiClient.patch(`/admin/users/${id}/fraud-clear`, { reason }),
 };
 
 // ─── Payouts ───────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { FraudStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
@@ -120,6 +120,45 @@ export class FraudService {
     this.logger.warn(`Fraud: user=${userId} escalated to BLOCKED`);
   }
 
+  /**
+   * Clear a suspicious flag back to normal — the only way out of `suspicious`.
+   * Without this an automated flag is permanent: payouts stay held forever
+   * (payouts.service rejects on fraudStatus), and reviewing the underlying
+   * FraudLog only annotates the log row, never the user.
+   *
+   * Does not delete the fraud logs that caused the flag — the audit trail stays,
+   * and this clear is itself recorded as a log entry.
+   */
+  async clearFraudStatus(userId: string, adminId: string, reason: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { fraudStatus: true },
+    });
+    if (!user) throw new NotFoundException('User not found.');
+
+    const previous = user.fraudStatus;
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { fraudStatus: FraudStatus.normal },
+      }),
+      this.prisma.fraudLog.create({
+        data: {
+          userId,
+          eventType: 'manual_clear',
+          detectedValue: `cleared_from_${previous}`,
+          actionTaken: 'cleared_to_normal',
+          reviewedByAdmin: true,
+          adminVerdict: `${reason} (by admin ${adminId})`,
+        },
+      }),
+    ]);
+
+    this.logger.log(`Fraud: user=${userId} cleared ${previous} -> normal by admin=${adminId}`);
+    return { message: `Fraud status cleared (was ${previous}). Payouts are no longer held.` };
+  }
+
   async reviewLog(logId: string, status: string) {
     return this.prisma.fraudLog.update({
       where: { id: logId },
@@ -156,6 +195,7 @@ export class FraudService {
     const severityMap: Record<string, string> = {
       ip_collision: 'high', gaid_change: 'medium', rapid_rewards: 'high',
       payout_hammering: 'medium', admin_status_change: 'low',
+      manual_clear: 'low',
     };
     let logStatus = 'pending';
     if (log.reviewedByAdmin) {

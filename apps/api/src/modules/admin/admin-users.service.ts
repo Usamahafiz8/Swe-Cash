@@ -72,7 +72,19 @@ export class AdminUsersService {
       take: 50,
     });
 
-    return { ...user, transactions };
+    const { wallet, ...rest } = user;
+
+    return {
+      ...rest,
+      wallet,
+      transactions,
+      // Aliases matching the list endpoint's contract. The admin UI shares one User
+      // type across both endpoints and reads these names — without them the detail
+      // modal renders blanks for status and balance.
+      status: user.accountStatus as string,
+      walletBalance: wallet?.availableBalance ?? 0,
+      lifetimeEarnings: wallet?.lifetimeEarnings ?? 0,
+    };
   }
 
   async updateStatus(userId: string, dto: UpdateUserStatusDto, adminId: string) {
@@ -104,18 +116,16 @@ export class AdminUsersService {
     const isCredit = dto.amount > 0;
 
     if (isCredit) {
-      await this.walletService.credit({
+      // Release the entry credit() just wrote — re-finding the newest `bonus` row by
+      // timestamp could pick up a concurrent adjustment for the same user instead.
+      const ledger = await this.walletService.credit({
         userId,
         amount: absAmount,
         type: 'bonus',
         metadata: { admin_id: adminId, reason: dto.reason },
       });
       // Auto-release bonus to available immediately
-      const ledger = await this.prisma.transaction.findFirst({
-        where: { userId, type: 'bonus' },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (ledger) await this.walletService.releasePending(ledger.id);
+      await this.walletService.releasePending(ledger.id);
     } else {
       await this.walletService.debit({
         userId,

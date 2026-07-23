@@ -39,6 +39,7 @@ import {
   AdminListQueryDto,
   AdminPayoutListQueryDto,
   AdjustBalanceDto,
+  ClearFraudStatusDto,
   UpdateUserStatusDto,
   PayoutActionDto,
   UpdateSettingDto,
@@ -132,6 +133,19 @@ export class AdminController {
   @ApiParam({ name: 'id', description: 'User UUID' })
   escalateUser(@Param('id') id: string) {
     return this.fraudService.escalateToBlocked(id);
+  }
+
+  @UseGuards(AdminJwtGuard)
+  @ApiBearerAuth('admin-jwt')
+  @Patch('users/:id/fraud-clear')
+  @ApiOperation({ summary: 'Clear a user fraud flag back to normal — un-holds their payouts' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  clearUserFraud(
+    @Param('id') id: string,
+    @Body() dto: ClearFraudStatusDto,
+    @CurrentAdmin() admin: RequestAdmin,
+  ) {
+    return this.fraudService.clearFraudStatus(id, admin.id, dto.reason);
   }
 
   @UseGuards(AdminJwtGuard)

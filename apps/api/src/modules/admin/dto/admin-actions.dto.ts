@@ -35,6 +35,13 @@ export class AdjustBalanceDto {
   reason: string;
 }
 
+export class ClearFraudStatusDto {
+  @ApiProperty({ example: 'Reviewed — emulator flag was a QA device, not fraud' })
+  @IsString()
+  @MaxLength(500)
+  reason: string;
+}
+
 export class PayoutActionDto {
   @ApiPropertyOptional({ example: 'Rejected — unverified PayPal account' })
   @IsOptional()
